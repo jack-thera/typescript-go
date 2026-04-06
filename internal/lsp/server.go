@@ -1555,31 +1555,11 @@ func (s *Server) handleProjectInfo(ctx context.Context, params *lsproto.ProjectI
 	}, nil
 }
 
-func (s *Server) handleFindFileReferences(ctx context.Context, params *lsproto.FindFileReferencesParams, _ *lsproto.RequestMessage) (lsproto.CustomFindFileReferencesResponse, error) {
+func (s *Server) handleFindFileReferences(ctx context.Context, params *lsproto.FindFileReferencesParams, req *lsproto.RequestMessage) (lsproto.CustomFindFileReferencesResponse, error) {
 	uri := params.TextDocument.Uri
-	_, _, allProjects, err := s.session.GetLanguageServiceAndProjectsForFile(ctx, uri)
+	defaultLs, orchestrator, err := s.getLanguageServiceAndCrossProjectOrchestrator(ctx, uri, req)
 	if err != nil {
 		return lsproto.LocationsOrNull{}, err
 	}
-
-	var combined []lsproto.Location
-	var seenLocations collections.Set[lsproto.Location]
-	for _, p := range allProjects {
-		languageService := s.session.GetLanguageServiceForProjectWithFile(ctx, p.(*project.Project), uri)
-		if languageService == nil {
-			continue
-		}
-		resp, lsErr := languageService.GetFileReferences(ctx, uri)
-		if lsErr != nil {
-			return lsproto.LocationsOrNull{}, lsErr
-		}
-		if resp.Locations != nil {
-			for _, loc := range *resp.Locations {
-				if seenLocations.AddIfAbsent(loc) {
-					combined = append(combined, loc)
-				}
-			}
-		}
-	}
-	return lsproto.LocationsOrNull{Locations: &combined}, nil
+	return defaultLs.GetFileReferences(ctx, uri, orchestrator)
 }

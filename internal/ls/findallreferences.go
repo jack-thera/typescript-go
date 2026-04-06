@@ -677,39 +677,98 @@ func (l *LanguageService) symbolAndEntriesToReferences(ctx context.Context, para
 	return lsproto.LocationsOrNull{Locations: &locations}, nil
 }
 
-// GetFileReferences returns all locations that reference the given file.
-// This is equivalent to TypeScript's getReferencesForFileName, finding all imports
-// and triple-slash references to the file.
-func (l *LanguageService) GetFileReferences(ctx context.Context, uri lsproto.DocumentUri) (lsproto.CustomFindFileReferencesResponse, error) {
-	program, sourceFile := l.getProgramAndFile(uri)
-	if sourceFile == nil {
-		return lsproto.LocationsOrNull{}, nil
-	}
-
-	sourceFiles := program.GetSourceFiles()
-	sourceFilesSet := collections.NewSetWithSizeHint[string](len(sourceFiles))
-	for _, sf := range sourceFiles {
-		sourceFilesSet.Add(sf.FileName())
-	}
-
-	checker, done := program.GetTypeChecker(ctx)
-	defer done()
-
-	var entries []*ReferenceEntry
-
-	// If the file has a module symbol (is a module file), find all import references.
-	if moduleSymbol := checker.GetMergedSymbol(sourceFile.Symbol); moduleSymbol != nil {
-		symbolsAndEntries := l.getReferencedSymbolsForModule(ctx, program, moduleSymbol, false /*excludeImportTypeOfExportEquals*/, sourceFiles, sourceFilesSet)
-		for _, sae := range symbolsAndEntries {
-			entries = append(entries, sae.references...)
+// GetFileReferences returns all locations that reference the given file across all
+// projects known to the orchestrator. When orchestrator is nil a single-project
+// search is performed using the receiver's program.
+func (l *LanguageService) GetFileReferences(ctx context.Context, uri lsproto.DocumentUri, orchestrator CrossProjectOrchestrator) (lsproto.CustomFindFileReferencesResponse, error) {
+	// getReferencesFromLS obtains all reference locations from a single language service.
+	getReferencesFromLS := func(ls *LanguageService) []lsproto.Location {
+		program, sourceFile := ls.getProgramAndFile(uri)
+		if sourceFile == nil {
+			return nil
 		}
-	} else {
-		// Non-module file: look for triple-slash references and other include reasons.
-		entries = getReferencesForNonModule(sourceFile, program)
+
+		sourceFiles := program.GetSourceFiles()
+		sourceFilesSet := collections.NewSetWithSizeHint[string](len(sourceFiles))
+		for _, sf := range sourceFiles {
+			sourceFilesSet.Add(sf.FileName())
+		}
+
+		checker, done := program.GetTypeChecker(ctx)
+		defer done()
+
+		var entries []*ReferenceEntry
+
+		// If the file has a module symbol (is a module file), find all import references.
+		if moduleSymbol := checker.GetMergedSymbol(sourceFile.Symbol); moduleSymbol != nil {
+			symbolsAndEntries := ls.getReferencedSymbolsForModule(ctx, program, moduleSymbol, false /*excludeImportTypeOfExportEquals*/, sourceFiles, sourceFilesSet)
+			for _, sae := range symbolsAndEntries {
+				entries = append(entries, sae.references...)
+			}
+		} else {
+			// Non-module file: look for triple-slash references and other include reasons.
+			entries = getReferencesForNonModule(sourceFile, program)
+		}
+
+		return ls.convertEntriesToLocations(entries)
 	}
 
-	locations := l.convertEntriesToLocations(entries)
-	return lsproto.LocationsOrNull{Locations: &locations}, nil
+	// Single-project path (no orchestrator): search only the default LS.
+	if orchestrator == nil {
+		locations := getReferencesFromLS(l)
+		return lsproto.LocationsOrNull{Locations: &locations}, nil
+	}
+
+	// Multi-project path: collect results from all initial projects, then
+	// expand to any additional projects surfaced by the project tree loader.
+	var combined []lsproto.Location
+	var seenLocations collections.Set[lsproto.Location]
+	var searchedProjects collections.Set[tspath.Path]
+
+	addLocations := func(locations []lsproto.Location) {
+		for _, loc := range locations {
+			if seenLocations.AddIfAbsent(loc) {
+				combined = append(combined, loc)
+			}
+		}
+	}
+
+	// Search all initially known projects.
+	for _, p := range orchestrator.GetAllProjectsForInitialRequest() {
+		if searchedProjects.AddIfAbsent(p.Id()) {
+			if ls := orchestrator.GetLanguageServiceForProjectWithFile(ctx, p, uri); ls != nil {
+				addLocations(getReferencesFromLS(ls))
+			}
+		}
+	}
+
+	// Build the set of already-searched project IDs to pass to the tree loader,
+	// then search any additional projects in the project dependency tree that
+	// also contain the target file.
+	var requestedProjectTrees collections.Set[tspath.Path]
+	for id := range searchedProjects.Keys() {
+		requestedProjectTrees.Add(id)
+	}
+
+	fileName := uri.FileName()
+	for loadedProject := range orchestrator.GetProjectsLoadingProjectTree(ctx, &requestedProjectTrees) {
+		if ctx.Err() != nil {
+			break
+		}
+		if loadedProject.GetProgram() == nil {
+			continue
+		}
+		if !searchedProjects.AddIfAbsent(loadedProject.Id()) {
+			continue
+		}
+		if loadedProject.HasFile(fileName) {
+			if ls := orchestrator.GetLanguageServiceForProjectWithFile(ctx, loadedProject, uri); ls != nil {
+				addLocations(getReferencesFromLS(ls))
+			}
+		}
+	}
+
+	return lsproto.LocationsOrNull{Locations: &combined}, nil
 }
 
 func (l *LanguageService) ProvideImplementations(ctx context.Context, params *lsproto.ImplementationParams, orchestrator CrossProjectOrchestrator) (lsproto.ImplementationResponse, error) {

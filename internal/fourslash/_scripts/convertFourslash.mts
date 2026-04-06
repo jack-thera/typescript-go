@@ -76,14 +76,20 @@ function parseTypeScriptFiles(manualTests: Set<string>, folder: string): void {
     files.forEach(file => {
         const filePath = path.join(folder, file);
         const stat = fs.statSync(filePath);
+
+        if (stat.isDirectory()) {
+            // Always recurse into subdirectories regardless of inputFileSet,
+            // so that e.g. "server/getFileReferences_server1.ts" is reachable
+            // when the user specifies only the basename in the filter list.
+            parseTypeScriptFiles(manualTests, filePath);
+            return;
+        }
+
         if (inputFileSet && !inputFileSet.has(file)) {
             return;
         }
 
-        if (stat.isDirectory()) {
-            parseTypeScriptFiles(manualTests, filePath);
-        }
-        else if (hasTSExtension(file) && !manualTests.has(file.slice(0, -3)) && file !== "fourslash.ts") {
+        if (hasTSExtension(file) && !manualTests.has(file.slice(0, -3)) && file !== "fourslash.ts") {
             const content = fs.readFileSync(filePath, "utf-8");
             const isServer = filePath.split(path.sep).includes("server");
             try {
