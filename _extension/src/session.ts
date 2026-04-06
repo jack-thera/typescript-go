@@ -240,8 +240,8 @@ class Session implements vscode.Disposable {
         }));
 
         for (const command of ["typescript.sortImports", "javascript.sortImports"]) {
-            this.disposables.push(vscode.commands.registerCommand(command, async () => {
-                await vscode.commands.executeCommand("editor.action.sourceAction", {
+            this.disposables.push(vscode.commands.registerCommand(command, () => {
+                return vscode.commands.executeCommand("editor.action.sourceAction", {
                     kind: "source.sortImports",
                     apply: "first",
                 });
@@ -249,8 +249,8 @@ class Session implements vscode.Disposable {
         }
 
         for (const command of ["typescript.removeUnusedImports", "javascript.removeUnusedImports"]) {
-            this.disposables.push(vscode.commands.registerCommand(command, async () => {
-                await vscode.commands.executeCommand("editor.action.sourceAction", {
+            this.disposables.push(vscode.commands.registerCommand(command, () => {
+                return vscode.commands.executeCommand("editor.action.sourceAction", {
                     kind: "source.removeUnusedImports",
                     apply: "first",
                 });
