@@ -1,0 +1,26 @@
+/test.cjs(2,1): error TS4023: Exported variable 'extpkg' has or is using name 'ExtPkg' from external module "/node_modules/@types/extpkg/index" but cannot be named.
+
+
+==== /node_modules/@types/extpkg/index.d.ts (0 errors) ====
+    declare namespace extpkg {
+        interface Options {
+            pattern: string;
+        }
+    }
+    interface ExtPkg {
+        (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
+    }
+    declare const extpkg: ExtPkg;
+    export = extpkg;
+    
+==== /node_modules/@types/extpkg/package.json (0 errors) ====
+    { "name": "@types/extpkg", "version": "1.0.0" }
+    
+==== /test.cjs (1 errors) ====
+    /** @type {typeof import("extpkg") | undefined} */
+    let extpkg;
+    ~~~
+!!! error TS4023: Exported variable 'extpkg' has or is using name 'ExtPkg' from external module "/node_modules/@types/extpkg/index" but cannot be named.
+    
+    module.exports.extpkg = extpkg;
+    

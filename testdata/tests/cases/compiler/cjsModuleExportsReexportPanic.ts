@@ -5,10 +5,16 @@
 // @outDir: ./out
 
 // @filename: /node_modules/@types/extpkg/index.d.ts
-export interface Options {
-    pattern: string;
+declare namespace extpkg {
+    interface Options {
+        pattern: string;
+    }
 }
-export declare function match(list: readonly string[], patterns: string | readonly string[], options?: Options): string[];
+interface ExtPkg {
+    (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
+}
+declare const extpkg: ExtPkg;
+export = extpkg;
 
 // @filename: /node_modules/@types/extpkg/package.json
 { "name": "@types/extpkg", "version": "1.0.0" }

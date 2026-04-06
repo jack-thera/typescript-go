@@ -1,18 +1,32 @@
 //// [tests/cases/compiler/cjsModuleExportsReexportPanic.ts] ////
 
 === /node_modules/@types/extpkg/index.d.ts ===
-export interface Options {
->Options : Symbol(Options, Decl(index.d.ts, 0, 0))
+declare namespace extpkg {
+>extpkg : Symbol(extpkg, Decl(index.d.ts, 0, 0), Decl(index.d.ts, 8, 13))
 
-    pattern: string;
->pattern : Symbol(Options.pattern, Decl(index.d.ts, 0, 26))
+    interface Options {
+>Options : Symbol(Options, Decl(index.d.ts, 0, 26))
+
+        pattern: string;
+>pattern : Symbol(Options.pattern, Decl(index.d.ts, 1, 23))
+    }
 }
-export declare function match(list: readonly string[], patterns: string | readonly string[], options?: Options): string[];
->match : Symbol(match, Decl(index.d.ts, 2, 1))
->list : Symbol(list, Decl(index.d.ts, 3, 30))
->patterns : Symbol(patterns, Decl(index.d.ts, 3, 54))
->options : Symbol(options, Decl(index.d.ts, 3, 92))
->Options : Symbol(Options, Decl(index.d.ts, 0, 0))
+interface ExtPkg {
+>ExtPkg : Symbol(ExtPkg, Decl(index.d.ts, 4, 1))
+
+    (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
+>list : Symbol(list, Decl(index.d.ts, 6, 5))
+>patterns : Symbol(patterns, Decl(index.d.ts, 6, 29))
+>options : Symbol(options, Decl(index.d.ts, 6, 67))
+>extpkg : Symbol(extpkg, Decl(index.d.ts, 0, 0), Decl(index.d.ts, 8, 13))
+>Options : Symbol(extpkg.Options, Decl(index.d.ts, 0, 26))
+}
+declare const extpkg: ExtPkg;
+>extpkg : Symbol(extpkg, Decl(index.d.ts, 0, 0), Decl(index.d.ts, 8, 13))
+>ExtPkg : Symbol(ExtPkg, Decl(index.d.ts, 4, 1))
+
+export = extpkg;
+>extpkg : Symbol(extpkg, Decl(index.d.ts, 0, 0), Decl(index.d.ts, 8, 13))
 
 === /test.cjs ===
 /** @type {typeof import("extpkg") | undefined} */

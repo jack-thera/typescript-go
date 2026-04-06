@@ -1,27 +1,36 @@
 //// [tests/cases/compiler/cjsModuleExportsReexportPanic.ts] ////
 
 === /node_modules/@types/extpkg/index.d.ts ===
-export interface Options {
-    pattern: string;
+declare namespace extpkg {
+    interface Options {
+        pattern: string;
 >pattern : string
+    }
 }
-export declare function match(list: readonly string[], patterns: string | readonly string[], options?: Options): string[];
->match : (list: readonly string[], patterns: string | readonly string[], options?: Options) => string[]
+interface ExtPkg {
+    (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
 >list : readonly string[]
 >patterns : string | readonly string[]
->options : Options | undefined
+>options : import("extpkg").Options | undefined
+>extpkg : any
+}
+declare const extpkg: ExtPkg;
+>extpkg : ExtPkg
+
+export = extpkg;
+>extpkg : ExtPkg
 
 === /test.cjs ===
 /** @type {typeof import("extpkg") | undefined} */
 let extpkg;
->extpkg : typeof import("extpkg") | undefined
+>extpkg : ExtPkg | undefined
 
 module.exports.extpkg = extpkg;
->module.exports.extpkg = extpkg : typeof import("extpkg") | undefined
->module.exports.extpkg : typeof import("extpkg") | undefined
+>module.exports.extpkg = extpkg : ExtPkg | undefined
+>module.exports.extpkg : ExtPkg | undefined
 >module.exports : typeof import("./test.cjs")
 >module : { "\"/test\"": typeof import("./test.cjs"); }
 >exports : typeof import("./test.cjs")
->extpkg : typeof import("extpkg") | undefined
->extpkg : typeof import("extpkg") | undefined
+>extpkg : ExtPkg | undefined
+>extpkg : ExtPkg | undefined
 

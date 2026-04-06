@@ -1,10 +1,16 @@
 //// [tests/cases/compiler/cjsModuleExportsReexportPanic.ts] ////
 
 //// [index.d.ts]
-export interface Options {
-    pattern: string;
+declare namespace extpkg {
+    interface Options {
+        pattern: string;
+    }
 }
-export declare function match(list: readonly string[], patterns: string | readonly string[], options?: Options): string[];
+interface ExtPkg {
+    (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
+}
+declare const extpkg: ExtPkg;
+export = extpkg;
 
 //// [package.json]
 { "name": "@types/extpkg", "version": "1.0.0" }
@@ -24,4 +30,4 @@ module.exports.extpkg = extpkg;
 
 
 //// [test.d.cts]
-export declare var extpkg: typeof import("extpkg") | undefined;
+export declare var extpkg: ExtPkg | undefined;
