@@ -1097,6 +1097,18 @@ func (tx *DeclarationTransformer) transformCommonJSExport(input *ast.Node, name 
 			return tx.Factory().NewSyntaxList([]*ast.Node{statement, assignment})
 		} else {
 			// export var name: Type
+			tx.state.getSymbolAccessibilityDiagnostic = func(result printer.SymbolAccessibilityResult) *SymbolAccessibilityDiagnostic {
+				return &SymbolAccessibilityDiagnostic{
+					diagnosticMessage: selectDiagnosticBasedOnModuleName(
+						result,
+						diagnostics.Exported_variable_0_has_or_is_using_name_1_from_external_module_2_but_cannot_be_named,
+						diagnostics.Exported_variable_0_has_or_is_using_name_1_from_private_module_2,
+						diagnostics.Exported_variable_0_has_or_is_using_private_name_1,
+					),
+					errorNode: input,
+					typeName:  name,
+				}
+			}
 			tx.tracker.PushErrorFallbackNode(input)
 			type_ := tx.ensureType(input, false)
 			varDecl := tx.Factory().NewVariableDeclaration(name, nil, type_, nil)
