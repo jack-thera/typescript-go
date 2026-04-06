@@ -288,19 +288,16 @@ func TestFormatSelectionPreservesComments(t *testing.T) {
 			Path:     "/test.ts",
 		}, originalText, core.ScriptKindTS)
 
-		// Select a range that starts at the beginning of the line and ends inside the comment
-		// "const test/* comment" - selecting up to but not including the closing "*/"
-		// The comment "/* comment */" starts at position 10 and ends at position 24
-		// We select up to position 22 (inside the comment, before "*/)
+		// Select a range that starts at the beginning of the line and ends inside the block comment.
+		// This covers `const test/* comment`, stopping before the closing `*/`.
 		commentStart := strings.Index(originalText, "/*")
-		selectionEnd := commentStart + len("/* comment") // ends inside the comment
+		selectionEnd := commentStart + len("/* comment") // ends inside the comment, before the closing `*/`
 
 		edits := format.FormatSelection(ctx, sourceFile, 0, selectionEnd)
 		formatted := applyBulkEdits(originalText, edits)
 
-		// The comment should be preserved
-		assert.Check(t, strings.Contains(formatted, "/* comment */"), "format selection should not delete the block comment")
-		assert.Check(t, strings.Contains(formatted, "test"), "should preserve identifier")
+		// The entire statement should be preserved unchanged
+		assert.Equal(t, formatted, originalText, "format selection should not delete the block comment or alter the statement")
 	})
 
 	t.Run("format selection should not delete block comment when selection starts inside comment", func(t *testing.T) {
@@ -331,11 +328,11 @@ func TestFormatSelectionPreservesComments(t *testing.T) {
 		edits := format.FormatSelection(ctx, sourceFile, selectionStart, len(originalText))
 		formatted := applyBulkEdits(originalText, edits)
 
-		// The comment should be preserved
-		assert.Check(t, strings.Contains(formatted, "/* comment */"), "format selection should not delete the block comment")
+		// The entire statement should be preserved unchanged
+		assert.Equal(t, formatted, originalText, "format selection should not delete the block comment or alter the statement")
 	})
 
-	t.Run("full document format should preserve block comment and add spaces", func(t *testing.T) {
+	t.Run("full document format should preserve block comment", func(t *testing.T) {
 		t.Parallel()
 		ctx := format.WithFormatCodeSettings(t.Context(), &lsutil.FormatCodeSettings{
 			EditorSettings: lsutil.EditorSettings{
@@ -359,9 +356,8 @@ func TestFormatSelectionPreservesComments(t *testing.T) {
 		edits := format.FormatDocument(ctx, sourceFile)
 		formatted := applyBulkEdits(originalText, edits)
 
-		// Full document format should preserve the comment and add proper spacing
-		assert.Check(t, strings.Contains(formatted, "/* comment */"), "full format should preserve the block comment")
-		assert.Check(t, strings.Contains(formatted, "test"), "should preserve identifier")
+		// Full document format should preserve the comment and the entire statement
+		assert.Equal(t, formatted, originalText, "full format should preserve the block comment and the statement")
 	})
 }
 
