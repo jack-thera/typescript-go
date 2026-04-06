@@ -1,62 +1,27 @@
 //// [tests/cases/compiler/cjsModuleExportsReexportPanic.ts] ////
 
-=== /node_modules/@types/dep/index.d.ts ===
-declare namespace dep {
-    interface Options {
-        expand?: (str: string) => string;
->expand : ((str: string) => string) | undefined
->str : string
-    }
-}
-declare function dep(pattern: string, options?: dep.Options): string[];
->dep : (pattern: string, options?: dep.Options) => string[]
->pattern : string
->options : import("dep").Options | undefined
->dep : any
-
-export = dep;
->dep : (pattern: string, options?: dep.Options) => string[]
-
 === /node_modules/@types/extpkg/index.d.ts ===
-import dep = require("dep");
->dep : (pattern: string, options?: dep.Options) => string[]
-
-declare namespace extpkg {
-    interface Options {
-        pattern: string;
+export interface Options {
+    pattern: string;
 >pattern : string
-    }
 }
-interface ExtPkg {
-    (list: readonly string[], patterns: string | readonly string[], options?: extpkg.Options): string[];
+export declare function match(list: readonly string[], patterns: string | readonly string[], options?: Options): string[];
+>match : (list: readonly string[], patterns: string | readonly string[], options?: Options) => string[]
 >list : readonly string[]
 >patterns : string | readonly string[]
->options : import("extpkg").Options | undefined
->extpkg : any
-
-    dep(pattern: string, options?: dep.Options): string[];
->dep : (pattern: string, options?: dep.Options) => string[]
->pattern : string
->options : dep.Options | undefined
->dep : any
-}
-declare const extpkg: ExtPkg;
->extpkg : ExtPkg
-
-export = extpkg;
->extpkg : ExtPkg
+>options : Options | undefined
 
 === /test.cjs ===
 /** @type {typeof import("extpkg") | undefined} */
 let extpkg;
->extpkg : ExtPkg | undefined
+>extpkg : typeof import("extpkg") | undefined
 
 module.exports.extpkg = extpkg;
->module.exports.extpkg = extpkg : ExtPkg | undefined
->module.exports.extpkg : ExtPkg | undefined
+>module.exports.extpkg = extpkg : typeof import("extpkg") | undefined
+>module.exports.extpkg : typeof import("extpkg") | undefined
 >module.exports : typeof import("./test.cjs")
 >module : { "\"/test\"": typeof import("./test.cjs"); }
 >exports : typeof import("./test.cjs")
->extpkg : ExtPkg | undefined
->extpkg : ExtPkg | undefined
+>extpkg : typeof import("extpkg") | undefined
+>extpkg : typeof import("extpkg") | undefined
 
