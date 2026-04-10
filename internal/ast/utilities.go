@@ -457,7 +457,7 @@ func IsCommaExpression(node *Node) bool {
 }
 
 func IsCommaSequence(node *Node) bool {
-	return IsCommaExpression(node)
+	return IsCommaExpression(node) || IsCommaListExpression(node)
 }
 
 func IsIterationStatement(node *Node, lookInLabeledStatements bool) bool {

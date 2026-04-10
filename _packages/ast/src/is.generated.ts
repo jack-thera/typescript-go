@@ -51,6 +51,7 @@ import type {
     ClassLikeDeclaration,
     ClassStaticBlockDeclaration,
     ColonToken,
+    CommaListExpression,
     CommonJSExport,
     CompoundAssignmentOperator,
     ComputedPropertyName,
@@ -870,6 +871,10 @@ export function isSyntheticExpression(node: Node): node is SyntheticExpression {
 
 export function isPartiallyEmittedExpression(node: Node): node is PartiallyEmittedExpression {
     return node.kind === SyntaxKind.PartiallyEmittedExpression;
+}
+
+export function isCommaListExpression(node: Node): node is CommaListExpression {
+    return node.kind === SyntaxKind.CommaListExpression;
 }
 
 export function isJsxElement(node: Node): node is JsxElement {

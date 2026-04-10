@@ -31,6 +31,7 @@ import type {
     ClassExpression,
     ClassStaticBlockDeclaration,
     ColonToken,
+    CommaListExpression,
     CommonJSExport,
     ComputedPropertyName,
     ConciseBody,
@@ -943,6 +944,8 @@ function cloneNodeData(node: Node): any {
             return { type: n.type, isSpread: n.isSpread, tupleNameSource: n.tupleNameSource };
         case SyntaxKind.PartiallyEmittedExpression:
             return { expression: n.expression };
+        case SyntaxKind.CommaListExpression:
+            return { elements: n.elements };
         case SyntaxKind.JsxElement:
             return { openingElement: n.openingElement, children: n.children, closingElement: n.closingElement };
         case SyntaxKind.JsxAttributes:
@@ -1440,6 +1443,7 @@ const forEachChildTable: Record<number, ForEachChildFunction> = {
         visitNode(cbNode, data.literal),
     [SyntaxKind.SyntheticExpression]: (data, cbNode, cbNodes) => visitNode(cbNode, data.tupleNameSource),
     [SyntaxKind.PartiallyEmittedExpression]: (data, cbNode, cbNodes) => visitNode(cbNode, data.expression),
+    [SyntaxKind.CommaListExpression]: (data, cbNode, cbNodes) => visitNodes(cbNode, cbNodes, data.elements),
     [SyntaxKind.JsxElement]: (data, cbNode, cbNodes) =>
         visitNode(cbNode, data.openingElement) ||
         visitNodes(cbNode, cbNodes, data.children) ||
@@ -2617,6 +2621,12 @@ export function createPartiallyEmittedExpression(expression: Expression): Partia
     }) as unknown as PartiallyEmittedExpression;
 }
 
+export function createCommaListExpression(elements: readonly Expression[]): CommaListExpression {
+    return new NodeObject(SyntaxKind.CommaListExpression, {
+        elements: createNodeArray(elements),
+    }) as unknown as CommaListExpression;
+}
+
 export function createJsxElement(openingElement: JsxOpeningElement, children: readonly JsxChild[], closingElement: JsxClosingElement): JsxElement {
     return new NodeObject(SyntaxKind.JsxElement, {
         openingElement,
@@ -3539,6 +3549,10 @@ export function updateSyntheticExpression(node: SyntheticExpression, tupleNameSo
 
 export function updatePartiallyEmittedExpression(node: PartiallyEmittedExpression, expression: Expression): PartiallyEmittedExpression {
     return node.expression !== expression ? createPartiallyEmittedExpression(expression) : node;
+}
+
+export function updateCommaListExpression(node: CommaListExpression, elements: readonly Expression[]): CommaListExpression {
+    return node.elements !== elements ? createCommaListExpression(elements) : node;
 }
 
 export function updateJsxElement(node: JsxElement, openingElement: JsxOpeningElement, children: readonly JsxChild[], closingElement: JsxClosingElement): JsxElement {
