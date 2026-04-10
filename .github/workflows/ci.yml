@@ -298,7 +298,7 @@ jobs:
           npx hereby test
 
       - run: git add .
-      - run: git diff --staged --exit-code
+      - run: git diff --staged --exit-code --stat
 
   tidy:
     runs-on: ubuntu-latest
