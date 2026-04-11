@@ -36,6 +36,38 @@ func NewThrottledWorkGroup(singleThreaded bool) WorkGroup {
 	}
 }
 
+// Semaphore limits concurrent access to a resource.
+// A nil *Semaphore is valid and performs no limiting;
+// callers are expected to arrange sequential execution themselves
+// when no semaphore is provided.
+type Semaphore struct {
+	ch chan struct{}
+}
+
+// NewSemaphore creates a Semaphore sized to GOMAXPROCS.
+// Returns nil when singleThreaded is true, as the caller's WorkGroup
+// already ensures sequential execution.
+func NewSemaphore(singleThreaded bool) *Semaphore {
+	if singleThreaded {
+		return nil
+	}
+	return &Semaphore{ch: make(chan struct{}, runtime.GOMAXPROCS(0))}
+}
+
+// Acquire blocks until a slot is available.
+func (s *Semaphore) Acquire() {
+	if s != nil {
+		s.ch <- struct{}{}
+	}
+}
+
+// Release frees a slot.
+func (s *Semaphore) Release() {
+	if s != nil {
+		<-s.ch
+	}
+}
+
 type parallelWorkGroup struct {
 	done atomic.Bool
 	wg   sync.WaitGroup

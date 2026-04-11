@@ -102,16 +102,25 @@ func (t *parseTask) load(loader *fileLoader) {
 		// to avoid adding spurious lookups to file watcher tracking.
 		t.metadata = ast.SourceFileMetaData{ImpliedNodeFormat: core.ResolutionModeCommonJS}
 	} else {
+		// Resolution: load metadata (package.json lookups involve stat calls).
+		loader.filesParser.resolveSem.Acquire()
 		t.metadata = loader.loadSourceFileMetaData(t.normalizedFilePath)
+		loader.filesParser.resolveSem.Release()
 	}
 
+	// Parsing: parse the source file (CPU-heavy).
+	loader.filesParser.parseSem.Acquire()
 	file := loader.parseSourceFile(t)
+	loader.filesParser.parseSem.Release()
 	if file == nil {
 		return
 	}
 
 	t.file = file
 	t.subTasks = make([]*parseTask, 0, len(file.ReferencedFiles)+len(file.Imports())+len(file.ModuleAugmentations))
+
+	// Resolution: resolve references, type directives, and imports (stat-heavy).
+	loader.filesParser.resolveSem.Acquire()
 
 	compilerOptions := loader.opts.Config.CompilerOptions()
 	if !compilerOptions.NoResolve.IsTrue() {
@@ -152,6 +161,8 @@ func (t *parseTask) load(loader *fileLoader) {
 	}
 
 	loader.resolveImportsAndModuleAugmentations(t)
+
+	loader.filesParser.resolveSem.Release()
 }
 
 func (t *parseTask) redirect(loader *fileLoader, fileName string) {
@@ -165,6 +176,8 @@ func (t *parseTask) redirect(loader *fileLoader, fileName string) {
 }
 
 func (t *parseTask) loadAutomaticTypeDirectives(loader *fileLoader) {
+	loader.filesParser.resolveSem.Acquire()
+	defer loader.filesParser.resolveSem.Release()
 	toParseTypeRefs, typeResolutionsInFile, typeResolutionsTrace, pDiagnostics := loader.resolveAutomaticTypeDirectives(t.normalizedFilePath)
 	t.typeResolutionsInFile = typeResolutionsInFile
 	t.typeResolutionsTrace = typeResolutionsTrace
@@ -197,6 +210,8 @@ func (t *parseTask) addSubTask(ref resolvedRef, libFile *LibFile) {
 
 type filesParser struct {
 	wg             core.WorkGroup
+	resolveSem     *core.Semaphore
+	parseSem       *core.Semaphore
 	taskDataByPath collections.SyncMap[tspath.Path, *parseTaskData]
 	maxDepth       int
 }
