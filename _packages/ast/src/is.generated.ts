@@ -52,7 +52,6 @@ import type {
     ClassStaticBlockDeclaration,
     ColonToken,
     CommaListExpression,
-    CommonJSExport,
     CompoundAssignmentOperator,
     ComputedPropertyName,
     ConditionalExpression,
@@ -520,17 +519,7 @@ export function isNamedImports(node: Node): node is NamedImports {
 }
 
 export function isExportAssignment(node: Node): node is ExportAssignment {
-    switch (node.kind) {
-        case SyntaxKind.ExportAssignment:
-        case SyntaxKind.JSExportAssignment:
-            return true;
-        default:
-            return false;
-    }
-}
-
-export function isCommonJSExport(node: Node): node is CommonJSExport {
-    return node.kind === SyntaxKind.CommonJSExport;
+    return node.kind === SyntaxKind.ExportAssignment;
 }
 
 export function isNamespaceExportDeclaration(node: Node): node is NamespaceExportDeclaration {

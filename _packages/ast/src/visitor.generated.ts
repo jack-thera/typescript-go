@@ -21,7 +21,6 @@ import type {
     ClassExpression,
     ClassStaticBlockDeclaration,
     CommaListExpression,
-    CommonJSExport,
     ComputedPropertyName,
     ConditionalExpression,
     ConditionalTypeNode,
@@ -199,7 +198,6 @@ import {
     updateClassExpression,
     updateClassStaticBlockDeclaration,
     updateCommaListExpression,
-    updateCommonJSExport,
     updateComputedPropertyName,
     updateConditionalExpression,
     updateConditionalTypeNode,
@@ -726,13 +724,6 @@ const visitEachChildTable: Record<number, VisitEachChildFunction> = {
         const _type = visitNode(node.type, visitor, isTypeNode);
         const _expression = visitNode(node.expression, visitor, isExpression);
         return updateExportAssignment(node, _modifiers, _type, _expression);
-    },
-    [SyntaxKind.CommonJSExport]: (node: CommonJSExport, visitor: Visitor): CommonJSExport => {
-        const _modifiers = visitNodes(node.modifiers, visitor);
-        const _name = visitNode(node.name, visitor, isIdentifier);
-        const _type = visitNode(node.type, visitor, isTypeNode);
-        const _initializer = visitNode(node.initializer, visitor, isExpression);
-        return updateCommonJSExport(node, _modifiers, _name, _type, _initializer);
     },
     [SyntaxKind.NamespaceExportDeclaration]: (node: NamespaceExportDeclaration, visitor: Visitor): NamespaceExportDeclaration => {
         const _modifiers = visitNodes(node.modifiers, visitor);
