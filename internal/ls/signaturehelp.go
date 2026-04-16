@@ -1114,8 +1114,8 @@ func getApplicableSpanForArguments(argumentList *ast.NodeList, node *ast.Node, s
 }
 
 // ensureMinimumSpanSize ensures that a span includes at least one position.
-// This is necessary for empty argument lists where start == end would create
-// a span that doesn't contain any position.
+// TextRange.Contains uses a half-open interval, so an empty span would not contain
+// the cursor immediately after typing an opening paren in a call like foo(bar(|)).
 func ensureMinimumSpanSize(start, end int) int {
 	if end <= start {
 		return start + 1
