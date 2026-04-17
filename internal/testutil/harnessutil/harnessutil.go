@@ -66,6 +66,7 @@ type HarnessOptions struct {
 	FileName                  string
 	LibFiles                  []string
 	NoImplicitReferences      bool
+	NoDefaultOpen             bool
 	CurrentDirectory          string
 	Symlink                   string
 	Link                      string
@@ -338,6 +339,10 @@ var harnessCommandLineOptions = []*tsoptions.CommandLineOption{
 		Kind: tsoptions.CommandLineOptionTypeBoolean,
 	},
 	{
+		Name: "noDefaultOpen",
+		Kind: tsoptions.CommandLineOptionTypeBoolean,
+	},
+	{
 		Name: "currentDirectory",
 		Kind: tsoptions.CommandLineOptionTypeString,
 	},
@@ -393,6 +398,8 @@ func parseHarnessOption(t *testing.T, key string, value any, harnessOptions *Har
 		}
 	case "noImplicitReferences":
 		harnessOptions.NoImplicitReferences = value.(bool)
+	case "noDefaultOpen":
+		harnessOptions.NoDefaultOpen = value.(bool)
 	case "currentDirectory":
 		harnessOptions.CurrentDirectory = value.(string)
 	case "symlink":
