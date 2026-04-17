@@ -210,10 +210,6 @@ func NewFourslash(t *testing.T, capabilities *lsproto.ClientCapabilities, conten
 	if testData.isStateBaseliningEnabled() {
 		// Single baseline, so initialize project state baseline too
 		f.stateBaseline = newStateBaseline(fsFromMap.(iovfs.FsWithSys))
-	} else if harnessOptions.NoDefaultOpen {
-		// When @noDefaultOpen is set, don't auto-open any files. Tests using
-		// this option must explicitly call f.OpenFile() to control which files
-		// become inferred project roots.
 	} else {
 		for _, file := range testData.Files {
 			f.openFile(t, file.fileName)
@@ -897,12 +893,6 @@ func (f *FourslashTest) openFile(t *testing.T, filename string) {
 		},
 	})
 	f.baselineProjectsAfterNotification(t, filename)
-}
-
-// OpenFile opens a file via LSP didOpen.
-func (f *FourslashTest) OpenFile(t *testing.T, filename string) {
-	t.Helper()
-	f.openFile(t, filename)
 }
 
 func (f *FourslashTest) FormatDocument(t *testing.T, filename string) {

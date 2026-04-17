@@ -11,8 +11,7 @@ import (
 func TestTripleSlashRefPathCompletionAbsolutePaths(t *testing.T) {
 	t.Parallel()
 	defer testutil.RecoverAndFail(t, "Panic on fourslash test")
-	const content = `// @noDefaultOpen: true
-// @Filename: /tests/cases/fourslash/tests/test0.ts
+	const content = `// @Filename: /tests/cases/fourslash/tests/test0.ts
 /// <reference path="/tests/cases/f/*0*/
 // @Filename: /tests/cases/fourslash/tests/test1.ts
 /// <reference path="/tests/cases/fourslash/*1*/
@@ -34,7 +33,6 @@ func TestTripleSlashRefPathCompletionAbsolutePaths(t *testing.T) {
 /*e2*/`
 	f, done := fourslash.NewFourslash(t, nil /*capabilities*/, content)
 	defer done()
-	f.OpenFile(t, "/tests/cases/fourslash/tests/test0.ts")
 	f.VerifyCompletions(t, []string{"0", "1"}, &fourslash.CompletionsExpectedList{
 		IsIncomplete: false,
 		ItemDefaults: &fourslash.CompletionsExpectedItemDefaults{
@@ -56,8 +54,11 @@ func TestTripleSlashRefPathCompletionAbsolutePaths(t *testing.T) {
 		Items: &fourslash.CompletionsExpectedItems{
 			Exact: []fourslash.CompletionsExpectedItem{
 				"e1.ts",
+				"e2.js",
 				"f1.ts",
 				"f2.tsx",
+				"f3.js",
+				"f4.jsx",
 				"folder",
 				"tests",
 			},

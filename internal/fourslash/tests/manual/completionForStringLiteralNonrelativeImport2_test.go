@@ -11,8 +11,7 @@ import (
 func TestCompletionForStringLiteralNonrelativeImport2(t *testing.T) {
 	t.Parallel()
 	defer testutil.RecoverAndFail(t, "Panic on fourslash test")
-	const content = `// @noDefaultOpen: true
-// @Filename: tests/test0.ts
+	const content = `// @Filename: tests/test0.ts
 import * as foo1 from "fake-module//*import_as0*/
 import foo2 = require("fake-module//*import_equals0*/
 var foo3 = require("fake-module//*require0*/
@@ -34,8 +33,6 @@ var foo3 = require("fake-module//*require0*/
 declare module "fake-module/other"`
 	f, done := fourslash.NewFourslash(t, nil /*capabilities*/, content)
 	defer done()
-	f.OpenFile(t, "/tests/test0.ts")
-	f.OpenFile(t, "/ambient.ts")
 	f.VerifyCompletions(t, []string{"import_as0", "import_equals0", "require0"}, &fourslash.CompletionsExpectedList{
 		IsIncomplete: false,
 		ItemDefaults: &fourslash.CompletionsExpectedItemDefaults{
@@ -45,6 +42,7 @@ declare module "fake-module/other"`
 		Items: &fourslash.CompletionsExpectedItems{
 			Exact: []fourslash.CompletionsExpectedItem{
 				"other",
+				"other2",
 				"repeated",
 			},
 		},

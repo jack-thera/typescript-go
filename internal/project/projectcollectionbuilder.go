@@ -972,12 +972,7 @@ func (b *ProjectCollectionBuilder) updateInferredProjectRoots(rootFileNames []st
 	} else {
 		newCompilerOptions := b.inferredProject.Value().CommandLine.CompilerOptions()
 		if b.compilerOptionsForInferredProjects != nil {
-			newCompilerOptions = b.compilerOptionsForInferredProjects
-			// When any root file is a JS file, force AllowJs to match
-			// Strada's toggleJsInferredProject behavior.
-			if anyRootIsJs(rootFileNames) {
-				newCompilerOptions = cloneCompilerOptionsWithAllowJs(newCompilerOptions)
-			}
+			newCompilerOptions = ensureAllowJsForInferredProject(b.compilerOptionsForInferredProjects)
 		}
 		newCommandLine := tsoptions.NewParsedCommandLine(newCompilerOptions, rootFileNames, tspath.ComparePathsOptions{
 			UseCaseSensitiveFileNames: b.fs.fs.UseCaseSensitiveFileNames(),

@@ -11,8 +11,7 @@ import (
 func TestTripleSlashRefPathCompletionExtensionsAllowJSFalse(t *testing.T) {
 	t.Parallel()
 	defer testutil.RecoverAndFail(t, "Panic on fourslash test")
-	const content = `// @noDefaultOpen: true
-// @Filename: test0.ts
+	const content = `// @Filename: test0.ts
 /// <reference path="/*0*/
 /// <reference path=".//*1*/
 /// <reference path="./f/*2*/
@@ -32,7 +31,6 @@ func TestTripleSlashRefPathCompletionExtensionsAllowJSFalse(t *testing.T) {
 `
 	f, done := fourslash.NewFourslash(t, nil /*capabilities*/, content)
 	defer done()
-	f.OpenFile(t, "/test0.ts")
 	f.VerifyCompletions(t, f.Markers(), &fourslash.CompletionsExpectedList{
 		IsIncomplete: false,
 		ItemDefaults: &fourslash.CompletionsExpectedItemDefaults{
@@ -42,6 +40,8 @@ func TestTripleSlashRefPathCompletionExtensionsAllowJSFalse(t *testing.T) {
 		Items: &fourslash.CompletionsExpectedItems{
 			Exact: []fourslash.CompletionsExpectedItem{
 				"f1.d.ts",
+				"f1.js",
+				"f1.jsx",
 				"f1.ts",
 				"f1.tsx",
 			},

@@ -3,7 +3,6 @@ package project
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"sync"
 
@@ -98,11 +97,13 @@ func NewConfiguredProject(
 	return NewProject(configFileName, KindConfigured, tspath.GetDirectoryPath(configFileName), builder, logger)
 }
 
-func anyRootIsJs(rootFileNames []string) bool {
-	return slices.ContainsFunc(rootFileNames, tspath.HasJSFileExtension)
-}
-
-func cloneCompilerOptionsWithAllowJs(compilerOptions *core.CompilerOptions) *core.CompilerOptions {
+// ensureAllowJsForInferredProject returns compiler options with AllowJs and
+// AllowNonTsExtensions forced on. If both are already set, the original pointer
+// is returned; otherwise a clone is made.
+func ensureAllowJsForInferredProject(compilerOptions *core.CompilerOptions) *core.CompilerOptions {
+	if compilerOptions.AllowJs == core.TSTrue && compilerOptions.AllowNonTsExtensions == core.TSTrue {
+		return compilerOptions
+	}
 	clone := compilerOptions.Clone()
 	clone.AllowJs = core.TSTrue
 	clone.AllowNonTsExtensions = core.TSTrue
@@ -131,12 +132,8 @@ func NewInferredProject(
 			AllowNonTsExtensions:       core.TSTrue,
 			ResolveJsonModule:          core.TSTrue,
 		}
-	} else if anyRootIsJs(rootFileNames) {
-		// When any root file is a JS file, enable AllowJs and AllowNonTsExtensions
-		// so JS files are included in the program. This matches Strada's
-		// toggleJsInferredProject behavior in addRoot, which forces allowJs = true
-		// when any root is a JavaScript file.
-		compilerOptions = cloneCompilerOptionsWithAllowJs(compilerOptions)
+	} else {
+		compilerOptions = ensureAllowJsForInferredProject(compilerOptions)
 	}
 	p.CommandLine = tsoptions.NewParsedCommandLine(
 		compilerOptions,
