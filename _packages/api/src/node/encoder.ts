@@ -1,38 +1,38 @@
 import type {
-    ArrayLiteralExpression,
-    Block,
-    ExportAssignment,
-    ExportDeclaration,
-    ExportSpecifier,
-    ImportAttributes,
-    ImportClause,
-    ImportEqualsDeclaration,
-    ImportSpecifier,
-    ImportTypeNode,
-    JSDocPropertyLikeTag,
-    JSDocTag,
-    JSDocTypeLiteral,
-    JsxText,
+    FileReference,
+    JSDocParameterOrPropertyTag,
     LiteralLikeNode,
     Node,
     NodeArray,
-    ObjectLiteralExpression,
     SourceFile,
     TemplateLiteralLikeNode,
 } from "@typescript/ast";
+import { SyntaxKind } from "@typescript/ast";
 import {
-    NodeFlags,
-    SyntaxKind,
-} from "@typescript/ast";
+    getNodeCommonData,
+    getNodeDataType,
+} from "./encoder.generated.ts";
+import { MsgpackWriter } from "./msgpack.ts";
 import {
     childProperties,
+    HEADER_OFFSET_EXTENDED_DATA,
+    HEADER_OFFSET_METADATA,
+    HEADER_OFFSET_NODES,
+    HEADER_OFFSET_STRING_TABLE,
+    HEADER_OFFSET_STRING_TABLE_OFFSETS,
+    HEADER_OFFSET_STRUCTURED_DATA,
     HEADER_SIZE,
     KIND_NODE_LIST,
     NODE_DATA_TYPE_CHILDREN,
     NODE_DATA_TYPE_EXTENDED,
     NODE_DATA_TYPE_STRING,
+    NODE_LEN,
     PROTOCOL_VERSION,
 } from "./protocol.ts";
+
+const NODE_FIELDS = NODE_LEN / 4;
+const NODE_FIELD_NEXT = 3;
+const NO_STRUCTURED_DATA = 0xFFFFFFFF;
 
 // String table that accumulates strings into a flat byte pool.
 class StringTable {
@@ -85,82 +85,12 @@ function cachedEncoder(): TextEncoder {
     return _encoder ??= new TextEncoder();
 }
 
-function getNodeDataType(kind: SyntaxKind): number {
-    switch (kind) {
-        case SyntaxKind.JsxText:
-        case SyntaxKind.Identifier:
-        case SyntaxKind.PrivateIdentifier:
-        case SyntaxKind.StringLiteral:
-        case SyntaxKind.NumericLiteral:
-        case SyntaxKind.BigIntLiteral:
-        case SyntaxKind.RegularExpressionLiteral:
-        case SyntaxKind.NoSubstitutionTemplateLiteral:
-        case SyntaxKind.JSDocText:
-            return NODE_DATA_TYPE_STRING;
-        case SyntaxKind.TemplateHead:
-        case SyntaxKind.TemplateMiddle:
-        case SyntaxKind.TemplateTail:
-        case SyntaxKind.SourceFile:
-            return NODE_DATA_TYPE_EXTENDED;
-        default:
-            return NODE_DATA_TYPE_CHILDREN;
-    }
-}
-
-function getNodeDefinedData(node: Node): number {
-    switch (node.kind) {
-        case SyntaxKind.JSDocTypeLiteral:
-            return ((node as JSDocTypeLiteral).isArrayType ? 1 : 0) << 24;
-        case SyntaxKind.ImportSpecifier:
-            return ((node as ImportSpecifier).isTypeOnly ? 1 : 0) << 24;
-        case SyntaxKind.ImportEqualsDeclaration:
-            return ((node as ImportEqualsDeclaration).isTypeOnly ? 1 : 0) << 24;
-        case SyntaxKind.ExportDeclaration:
-            return ((node as ExportDeclaration).isTypeOnly ? 1 : 0) << 24;
-        case SyntaxKind.ImportClause: {
-            const phaseModifier = (node as ImportClause).phaseModifier;
-            return ((phaseModifier === SyntaxKind.TypeKeyword ? 1 : 0) << 24) |
-                ((phaseModifier === SyntaxKind.DeferKeyword ? 1 : 0) << 25);
-        }
-        case SyntaxKind.ExportSpecifier:
-            return ((node as ExportSpecifier).isTypeOnly ? 1 : 0) << 24;
-        case SyntaxKind.ImportType:
-            return ((node as ImportTypeNode).isTypeOf ? 1 : 0) << 24;
-        case SyntaxKind.ExportAssignment:
-            return ((node as ExportAssignment).isExportEquals ? 1 : 0) << 24;
-        case SyntaxKind.Block:
-            return ((node as Block).multiLine ? 1 : 0) << 24;
-        case SyntaxKind.ArrayLiteralExpression:
-            return ((node as ArrayLiteralExpression).multiLine ? 1 : 0) << 24;
-        case SyntaxKind.ObjectLiteralExpression:
-            return ((node as ObjectLiteralExpression).multiLine ? 1 : 0) << 24;
-        case SyntaxKind.JSDocParameterTag:
-        case SyntaxKind.JSDocPropertyTag: {
-            const tag = node as JSDocPropertyLikeTag;
-            return ((tag.isBracketed ? 1 : 0) << 24) | ((tag.isNameFirst ? 1 : 0) << 25);
-        }
-        case SyntaxKind.JsxText:
-            return ((node as JsxText).containsOnlyTriviaWhiteSpaces ? 1 : 0) << 24;
-        case SyntaxKind.VariableDeclarationList: {
-            const flags = node.flags;
-            // NodeFlags.Let = 1, NodeFlags.Const = 2
-            return (flags & (NodeFlags.Let | NodeFlags.Const)) << 24;
-        }
-        case SyntaxKind.ImportAttributes: {
-            const attrs = node as ImportAttributes;
-            return ((attrs.multiLine ? 1 : 0) << 24) |
-                ((attrs.token === SyntaxKind.AssertKeyword ? 1 : 0) << 25);
-        }
-    }
-    return 0;
-}
-
 function getChildrenPropertyMask(node: Node): number {
     const kind = node.kind;
 
     // Special handling for JSDocParameterTag and JSDocPropertyTag
     if (kind === SyntaxKind.JSDocParameterTag || kind === SyntaxKind.JSDocPropertyTag) {
-        const tag = node as JSDocPropertyLikeTag & JSDocTag;
+        const tag = node as JSDocParameterOrPropertyTag;
         if (tag.isNameFirst) {
             return (boolBit(tag.tagName) << 0) | (boolBit(tag.name) << 1) | (boolBit(tag.typeExpression) << 2) | (boolBit(tag.comment) << 3);
         }
@@ -186,12 +116,11 @@ function boolBit(v: unknown): number {
     return isChildPresent(v) ? 1 : 0;
 }
 
-// A child is "present" if it's non-null and, for arrays, non-empty.
-// This matches the Go encoder's behavior where nil and empty NodeLists
-// are both treated as absent.
+// A child is "present" if it's non-null/non-undefined.
+// This matches the Go encoder's behavior where non-nil NodeLists (even empty)
+// are treated as present, and only nil NodeLists are absent.
 function isChildPresent(v: unknown): boolean {
     if (v === undefined || v === null) return false;
-    if (Array.isArray(v)) return v.length > 0;
     return true;
 }
 
@@ -199,17 +128,38 @@ function recordNodeStrings(node: Node, strs: StringTable): number {
     return strs.add((node as LiteralLikeNode).text ?? "");
 }
 
-function recordExtendedData(node: Node, strs: StringTable, extendedData: number[]): number {
+function encodeFileReferences(refs: readonly FileReference[] | undefined, writer: MsgpackWriter): number {
+    if (!refs || refs.length === 0) return NO_STRUCTURED_DATA;
+    const offset = writer.finish().length;
+    writer.writeArrayHeader(refs.length);
+    for (const ref of refs) {
+        writer.writeArrayHeader(5);
+        writer.writeUint(ref.pos);
+        writer.writeUint(ref.end);
+        writer.writeString(ref.fileName);
+        writer.writeUint(ref.resolutionMode ?? 0);
+        writer.writeBool(ref.preserve ?? false);
+    }
+    return offset;
+}
+
+function recordExtendedData(node: Node, strs: StringTable, extendedData: number[], structuredWriter: MsgpackWriter): number {
     const offset = extendedData.length * 4;
     if (node.kind === SyntaxKind.SourceFile) {
         const sf = node as SourceFile;
         const textIndex = strs.add(sf.text);
         const fileNameIndex = strs.add(sf.fileName);
         const pathIndex = strs.add(sf.path);
-        extendedData.push(textIndex, fileNameIndex, pathIndex);
+        const referencedFilesOffset = encodeFileReferences(sf.referencedFiles, structuredWriter);
+        const typeRefDirectivesOffset = encodeFileReferences(sf.typeReferenceDirectives, structuredWriter);
+        const libRefDirectivesOffset = encodeFileReferences(sf.libReferenceDirectives, structuredWriter);
+        extendedData.push(textIndex, fileNameIndex, pathIndex, sf.languageVariant, sf.scriptKind, referencedFilesOffset, typeRefDirectivesOffset, libRefDirectivesOffset, NO_STRUCTURED_DATA, NO_STRUCTURED_DATA, NO_STRUCTURED_DATA, 0);
     }
-    else {
-        // TemplateHead, TemplateMiddle, TemplateTail
+    else if (
+        node.kind === SyntaxKind.TemplateHead ||
+        node.kind === SyntaxKind.TemplateMiddle ||
+        node.kind === SyntaxKind.TemplateTail
+    ) {
         const tmpl = node as TemplateLiteralLikeNode;
         const text: string = tmpl.text ?? "";
         const rawText: string = tmpl.rawText ?? "";
@@ -218,95 +168,41 @@ function recordExtendedData(node: Node, strs: StringTable, extendedData: number[
         const rawTextIndex = strs.add(rawText);
         extendedData.push(textIndex, rawTextIndex, templateFlags);
     }
+    else {
+        // StringLiteral, NumericLiteral, BigIntLiteral, RegularExpressionLiteral,
+        // NoSubstitutionTemplateLiteral — format: [textIndex, tokenFlags]
+        const n = node as any;
+        const text: string = n.text ?? "";
+        const tokenFlags: number = n.tokenFlags ?? 0;
+        const textIndex = strs.add(text);
+        extendedData.push(textIndex, tokenFlags);
+    }
     return offset;
 }
 
-function getNodeData(node: Node, strs: StringTable, extendedData: number[]): number {
+function getNodeData(node: Node, strs: StringTable, extendedData: number[], structuredWriter: MsgpackWriter): number {
     const t = getNodeDataType(node.kind);
-    const defined = getNodeDefinedData(node);
+    const common = getNodeCommonData(node);
     switch (t) {
         case NODE_DATA_TYPE_CHILDREN:
-            return t | defined | getChildrenPropertyMask(node);
+            return t | common | getChildrenPropertyMask(node);
         case NODE_DATA_TYPE_STRING:
-            return t | defined | recordNodeStrings(node, strs);
+            return t | common | recordNodeStrings(node, strs);
         case NODE_DATA_TYPE_EXTENDED:
-            return t | defined | recordExtendedData(node, strs, extendedData);
+            return t | common | recordExtendedData(node, strs, extendedData, structuredWriter);
         default:
             throw new Error("unreachable");
     }
 }
 
-const singleChildNodePropertyNames: Readonly<Partial<Record<SyntaxKind, string>>> = {
-    // Single-child nodes
-    [SyntaxKind.ReturnStatement]: "expression",
-    [SyntaxKind.ThrowStatement]: "expression",
-    [SyntaxKind.ExpressionStatement]: "expression",
-    [SyntaxKind.BreakStatement]: "label",
-    [SyntaxKind.ContinueStatement]: "label",
-    [SyntaxKind.ParenthesizedExpression]: "expression",
-    [SyntaxKind.ComputedPropertyName]: "expression",
-    [SyntaxKind.Decorator]: "expression",
-    [SyntaxKind.SpreadElement]: "expression",
-    [SyntaxKind.SpreadAssignment]: "expression",
-    [SyntaxKind.DeleteExpression]: "expression",
-    [SyntaxKind.TypeOfExpression]: "expression",
-    [SyntaxKind.VoidExpression]: "expression",
-    [SyntaxKind.AwaitExpression]: "expression",
-    [SyntaxKind.NonNullExpression]: "expression",
-    [SyntaxKind.ExternalModuleReference]: "expression",
-    [SyntaxKind.NamespaceImport]: "name",
-    [SyntaxKind.NamespaceExport]: "name",
-    [SyntaxKind.JsxClosingElement]: "tagName",
-    [SyntaxKind.ArrayType]: "elementType",
-    [SyntaxKind.LiteralType]: "literal",
-    [SyntaxKind.InferType]: "typeParameter",
-    [SyntaxKind.OptionalType]: "type",
-    [SyntaxKind.RestType]: "type",
-    [SyntaxKind.ParenthesizedType]: "type",
-    [SyntaxKind.JSDocTypeExpression]: "type",
-    [SyntaxKind.JSDocNonNullableType]: "type",
-    [SyntaxKind.JSDocNullableType]: "type",
-    [SyntaxKind.JSDocVariadicType]: "type",
-    [SyntaxKind.JSDocOptionalType]: "type",
-    [SyntaxKind.PrefixUnaryExpression]: "operand",
-    [SyntaxKind.PostfixUnaryExpression]: "operand",
-    [SyntaxKind.MetaProperty]: "name",
-    [SyntaxKind.TypeOperator]: "type",
-    [SyntaxKind.MissingDeclaration]: "modifiers",
-    // Single NodeList child nodes
-    [SyntaxKind.Block]: "statements",
-    [SyntaxKind.VariableDeclarationList]: "declarations",
-    [SyntaxKind.ImportAttributes]: "elements",
-    [SyntaxKind.ArrayLiteralExpression]: "elements",
-    [SyntaxKind.ObjectLiteralExpression]: "properties",
-    [SyntaxKind.UnionType]: "types",
-    [SyntaxKind.IntersectionType]: "types",
-    [SyntaxKind.TupleType]: "elements",
-    [SyntaxKind.NamedImports]: "elements",
-    [SyntaxKind.NamedExports]: "elements",
-    [SyntaxKind.ModuleBlock]: "statements",
-    [SyntaxKind.CaseBlock]: "clauses",
-    [SyntaxKind.TypeLiteral]: "members",
-    [SyntaxKind.JsxAttributes]: "properties",
-    [SyntaxKind.ArrayBindingPattern]: "elements",
-    [SyntaxKind.ObjectBindingPattern]: "elements",
-    [SyntaxKind.HeritageClause]: "types",
-    [SyntaxKind.JSDocTypeLiteral]: "jsDocPropertyTags",
-};
-
-function getChildPropertiesForNode(node: Node): readonly string[] | undefined {
+function getChildPropertiesForNode(node: Node): readonly (string | undefined)[] | undefined {
     const kind = node.kind;
     if (kind === SyntaxKind.JSDocParameterTag || kind === SyntaxKind.JSDocPropertyTag) {
-        if ((node as JSDocPropertyLikeTag).isNameFirst) {
-            return kind === SyntaxKind.JSDocParameterTag
-                ? ["tagName", "name", "typeExpression", "comment"]
-                : ["name", "typeExpression"];
-        }
-        return kind === SyntaxKind.JSDocParameterTag
-            ? ["tagName", "typeExpression", "name", "comment"]
-            : ["typeExpression", "name"];
+        return (node as JSDocParameterOrPropertyTag).isNameFirst
+            ? ["tagName", "name", "typeExpression", "comment"]
+            : ["tagName", "typeExpression", "name", "comment"];
     }
-    return childProperties[kind] ?? [singleChildNodePropertyNames[kind]!];
+    return childProperties[kind];
 }
 
 // Returns whether a value is a NodeArray (array-like with pos and end).
@@ -328,12 +224,13 @@ export function encodeSourceFile(sourceFile: SourceFile): Uint8Array {
 export function encodeNode(node: Node): Uint8Array {
     const strs = new StringTable();
     const extendedDataValues: number[] = [];
+    const structuredWriter = new MsgpackWriter();
 
-    // We'll build an array of uint32 values for the nodes section, 6 per node
+    // We'll build an array of uint32 values for the nodes section, 7 per node
     const nodeValues: number[] = [];
 
     // Nil node (index 0)
-    nodeValues.push(0, 0, 0, 0, 0, 0);
+    nodeValues.push(0, 0, 0, 0, 0, 0, 0);
 
     let nodeCount = 0;
     let parentIndex = 0;
@@ -345,10 +242,10 @@ export function encodeNode(node: Node): Uint8Array {
 
         if (prevIndex !== 0) {
             // Set next pointer on previous sibling
-            nodeValues[prevIndex * 6 + 3] = currentIndex;
+            nodeValues[prevIndex * NODE_FIELDS + NODE_FIELD_NEXT] = currentIndex;
         }
 
-        const data = getNodeData(node, strs, extendedDataValues);
+        const data = getNodeData(node, strs, extendedDataValues, structuredWriter);
         nodeValues.push(
             node.kind,
             node.pos >= 0 ? node.pos : 0,
@@ -356,6 +253,7 @@ export function encodeNode(node: Node): Uint8Array {
             0, // next (filled in later)
             parentIndex,
             data,
+            node.flags,
         );
 
         const saveParentIndex = parentIndex;
@@ -370,7 +268,7 @@ export function encodeNode(node: Node): Uint8Array {
     }
 
     function visitNodeList(list: NodeArray<Node>): void {
-        if (!list || list.length === 0) {
+        if (!list) {
             return;
         }
 
@@ -378,7 +276,7 @@ export function encodeNode(node: Node): Uint8Array {
         const currentIndex = nodeCount;
 
         if (prevIndex !== 0) {
-            nodeValues[prevIndex * 6 + 3] = currentIndex;
+            nodeValues[prevIndex * NODE_FIELDS + NODE_FIELD_NEXT] = currentIndex;
         }
 
         nodeValues.push(
@@ -388,6 +286,7 @@ export function encodeNode(node: Node): Uint8Array {
             0, // next
             parentIndex,
             list.length, // data for NodeList is its length
+            0, // flags
         );
 
         const saveParentIndex = parentIndex;
@@ -424,7 +323,7 @@ export function encodeNode(node: Node): Uint8Array {
     // Encode root node
     nodeCount++;
     parentIndex++;
-    const rootData = getNodeData(node, strs, extendedDataValues);
+    const rootData = getNodeData(node, strs, extendedDataValues, structuredWriter);
     nodeValues.push(
         node.kind,
         node.pos >= 0 ? node.pos : 0,
@@ -432,6 +331,7 @@ export function encodeNode(node: Node): Uint8Array {
         0,
         0,
         rootData,
+        node.flags,
     );
 
     const saveParent = parentIndex;
@@ -447,6 +347,9 @@ export function encodeNode(node: Node): Uint8Array {
         extView.setUint32(i * 4, extendedDataValues[i], true);
     }
 
+    // Encode structured data section
+    const structuredDataBytes = structuredWriter.finish();
+
     // Encode string table
     const strsBytes = strs.encode();
 
@@ -461,25 +364,28 @@ export function encodeNode(node: Node): Uint8Array {
     const offsetStringTableOffsets = HEADER_SIZE;
     const offsetStringTableData = HEADER_SIZE + strs.offsetsCount() * 4;
     const offsetExtendedData = offsetStringTableData + strs.stringByteLength();
-    const offsetNodes = offsetExtendedData + extendedDataBytes.length;
+    const offsetStructuredData = offsetExtendedData + extendedDataBytes.length;
+    const offsetNodes = offsetStructuredData + structuredDataBytes.length;
 
     // Build header
     const header = new Uint8Array(HEADER_SIZE);
     const headerView = new DataView(header.buffer);
     const metadata = PROTOCOL_VERSION << 24;
-    headerView.setUint32(0, metadata, true); // metadata
+    headerView.setUint32(HEADER_OFFSET_METADATA, metadata, true);
     // bytes 4-19: hash (zero for non-SourceFile, we don't have access to xxh3 here)
     // byte 20-23: parse options (zero for non-SourceFile)
-    headerView.setUint32(24, offsetStringTableOffsets, true);
-    headerView.setUint32(28, offsetStringTableData, true);
-    headerView.setUint32(32, offsetExtendedData, true);
-    headerView.setUint32(36, offsetNodes, true);
+    headerView.setUint32(HEADER_OFFSET_STRING_TABLE_OFFSETS, offsetStringTableOffsets, true);
+    headerView.setUint32(HEADER_OFFSET_STRING_TABLE, offsetStringTableData, true);
+    headerView.setUint32(HEADER_OFFSET_EXTENDED_DATA, offsetExtendedData, true);
+    headerView.setUint32(HEADER_OFFSET_STRUCTURED_DATA, offsetStructuredData, true);
+    headerView.setUint32(HEADER_OFFSET_NODES, offsetNodes, true);
 
     // Concatenate all sections
-    const result = new Uint8Array(header.length + strsBytes.length + extendedDataBytes.length + nodesBytes.length);
+    const result = new Uint8Array(header.length + strsBytes.length + extendedDataBytes.length + structuredDataBytes.length + nodesBytes.length);
     result.set(header, 0);
     result.set(strsBytes, HEADER_SIZE);
     result.set(extendedDataBytes, offsetExtendedData);
+    result.set(structuredDataBytes, offsetStructuredData);
     result.set(nodesBytes, offsetNodes);
     return result;
 }
