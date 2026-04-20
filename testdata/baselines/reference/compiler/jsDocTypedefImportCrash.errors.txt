@@ -1,0 +1,28 @@
+/stats-collector.mjs(2,14): error TS1340: Module './runner.js' does not refer to a type, but is used as a type here. Did you mean 'typeof import('./runner.js')'?
+/stats-collector.mjs(9,31): error TS7006: Parameter 'runner' implicitly has an 'any' type.
+
+
+==== /runner.js (0 errors) ====
+    function Runner() {}
+    Runner.constants = {
+        EVENT_RUN_BEGIN: "begin",
+    };
+    module.exports = Runner;
+    
+==== /stats-collector.mjs (2 errors) ====
+    /**
+     * @typedef {import('./runner.js')} Runner
+                 ~~~~~~~~~~~~~~~~~~~~~
+!!! error TS1340: Module './runner.js' does not refer to a type, but is used as a type here. Did you mean 'typeof import('./runner.js')'?
+     */
+    
+    import Runner from "./runner.js";
+    
+    const { EVENT_RUN_BEGIN } = Runner.constants;
+    
+    function createStatsCollector(runner) {}
+                                  ~~~~~~
+!!! error TS7006: Parameter 'runner' implicitly has an 'any' type.
+    
+    export { createStatsCollector };
+    

@@ -6779,12 +6779,22 @@ func (c *Checker) getDeclarationSpaces(node *ast.Declaration) DeclarationSpaces 
 		fallthrough
 	case ast.KindImportEqualsDeclaration, ast.KindNamespaceImport, ast.KindImportClause:
 		result := DeclarationSpacesNone
-		target := c.resolveAlias(c.getSymbolOfDeclaration(node))
+		declSymbol := c.getSymbolOfDeclaration(node)
+		if declSymbol == nil {
+			return DeclarationSpacesNone
+		}
+		target := c.resolveAlias(declSymbol)
 		for _, d := range target.Declarations {
 			result |= c.getDeclarationSpaces(d)
 		}
 		return result
-	case ast.KindVariableDeclaration, ast.KindBindingElement, ast.KindFunctionDeclaration, ast.KindImportSpecifier:
+	case ast.KindVariableDeclaration, ast.KindBindingElement, ast.KindFunctionDeclaration, ast.KindImportSpecifier,
+		// Identifiers are used as declarations of assignment declarations whose parents may be
+		// SyntaxKind.CallExpression - `Object.defineProperty(thing, "aField", {value: 42});`
+		// SyntaxKind.ElementAccessExpression - `thing["aField"] = 42;` or `thing["aField"];` (with a doc comment on it)
+		// or SyntaxKind.PropertyAccessExpression - `thing.aField = 42;`
+		// all of which are pretty much always values, or at least imply a value meaning.
+		ast.KindIdentifier:
 		return DeclarationSpacesExportValue
 	case ast.KindMethodSignature, ast.KindPropertySignature:
 		return DeclarationSpacesExportType

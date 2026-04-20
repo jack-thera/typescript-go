@@ -1,0 +1,42 @@
+//// [tests/cases/compiler/jsDocTypedefImportCrash.ts] ////
+
+=== /runner.js ===
+function Runner() {}
+>Runner : Symbol(Runner, Decl(runner.js, 0, 0))
+
+Runner.constants = {
+>Runner.constants : Symbol(Runner.constants, Decl(runner.js, 0, 20))
+>Runner : Symbol(Runner, Decl(runner.js, 0, 0))
+>constants : Symbol(Runner.constants, Decl(runner.js, 0, 20))
+
+    EVENT_RUN_BEGIN: "begin",
+>EVENT_RUN_BEGIN : Symbol(EVENT_RUN_BEGIN, Decl(runner.js, 1, 20))
+
+};
+module.exports = Runner;
+>module.exports : Symbol(exports, Decl(runner.js, 0, 0))
+>module : Symbol(module, Decl(runner.js, 0, 0))
+>exports : Symbol(exports, Decl(runner.js, 0, 0))
+>Runner : Symbol(Runner, Decl(runner.js, 0, 0))
+
+=== /stats-collector.mjs ===
+/**
+ * @typedef {import('./runner.js')} Runner
+ */
+
+import Runner from "./runner.js";
+>Runner : Symbol(Runner, Decl(stats-collector.mjs, 4, 6), Decl(stats-collector.mjs, 1, 3))
+
+const { EVENT_RUN_BEGIN } = Runner.constants;
+>EVENT_RUN_BEGIN : Symbol(EVENT_RUN_BEGIN, Decl(stats-collector.mjs, 6, 7))
+>Runner.constants : Symbol(Runner.constants, Decl(runner.js, 0, 20))
+>Runner : Symbol(Runner, Decl(stats-collector.mjs, 4, 6), Decl(stats-collector.mjs, 1, 3))
+>constants : Symbol(Runner.constants, Decl(runner.js, 0, 20))
+
+function createStatsCollector(runner) {}
+>createStatsCollector : Symbol(createStatsCollector, Decl(stats-collector.mjs, 6, 45))
+>runner : Symbol(runner, Decl(stats-collector.mjs, 8, 30))
+
+export { createStatsCollector };
+>createStatsCollector : Symbol(createStatsCollector, Decl(stats-collector.mjs, 10, 8))
+

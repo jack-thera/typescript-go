@@ -1,0 +1,46 @@
+//// [tests/cases/compiler/jsDocTypedefImportCrash.ts] ////
+
+=== /runner.js ===
+function Runner() {}
+>Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+
+Runner.constants = {
+>Runner.constants = {    EVENT_RUN_BEGIN: "begin",} : { EVENT_RUN_BEGIN: string; }
+>Runner.constants : { EVENT_RUN_BEGIN: string; }
+>Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+>constants : { EVENT_RUN_BEGIN: string; }
+>{    EVENT_RUN_BEGIN: "begin",} : { EVENT_RUN_BEGIN: string; }
+
+    EVENT_RUN_BEGIN: "begin",
+>EVENT_RUN_BEGIN : string
+>"begin" : "begin"
+
+};
+module.exports = Runner;
+>module.exports = Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+>module.exports : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+>module : { exports: { (): void; constants: { EVENT_RUN_BEGIN: string; }; }; }
+>exports : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+>Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+
+=== /stats-collector.mjs ===
+/**
+ * @typedef {import('./runner.js')} Runner
+ */
+
+import Runner from "./runner.js";
+>Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+
+const { EVENT_RUN_BEGIN } = Runner.constants;
+>EVENT_RUN_BEGIN : string
+>Runner.constants : { EVENT_RUN_BEGIN: string; }
+>Runner : { (): void; constants: { EVENT_RUN_BEGIN: string; }; }
+>constants : { EVENT_RUN_BEGIN: string; }
+
+function createStatsCollector(runner) {}
+>createStatsCollector : (runner: any) => void
+>runner : any
+
+export { createStatsCollector };
+>createStatsCollector : (runner: any) => void
+
