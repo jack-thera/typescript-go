@@ -1463,10 +1463,10 @@ func (s *Server) handleVsOnAutoInsert(ctx context.Context, ls *ls.LanguageServic
 		if err != nil {
 			return lsproto.VsOnAutoInsertResponse{}, err
 		}
-		if closingTag.CustomClosingTagCompletion != nil {
+		if closingTag.CustomClosingTagCompletion != nil && closingTag.CustomClosingTagCompletion.VsTextEdit != nil {
 			return lsproto.VsOnAutoInsertResponse{
 				VsOnAutoInsertResponseItem: &lsproto.VsOnAutoInsertResponseItem{
-					TextEditFormat: closingTag.CustomClosingTagCompletion.VsTextEditFormat,
+					TextEditFormat: *closingTag.CustomClosingTagCompletion.VsTextEditFormat,
 					TextEdit:       closingTag.CustomClosingTagCompletion.VsTextEdit,
 				},
 			}, nil

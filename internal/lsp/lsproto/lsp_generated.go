@@ -28391,11 +28391,11 @@ type CustomClosingTagCompletion struct {
 	// The text to insert at the closing tag position.
 	NewText string `json:"newText"`
 
-	// The text edit to apply for the closing tag insertion (VS format).
-	VsTextEdit *TextEdit `json:"_vs_textEdit"`
+	// The text edit to apply for the closing tag insertion (VS format). Only set when the client is VS.
+	VsTextEdit *TextEdit `json:"_vs_textEdit,omitzero"`
 
-	// The format of the text edit (plaintext or snippet) (VS format).
-	VsTextEditFormat InsertTextFormat `json:"_vs_textEditFormat"`
+	// The format of the text edit (plaintext or snippet) (VS format). Only set when the client is VS.
+	VsTextEditFormat *InsertTextFormat `json:"_vs_textEditFormat,omitzero"`
 }
 
 var _ json.UnmarshalerFrom = (*CustomClosingTagCompletion)(nil)
@@ -28403,8 +28403,6 @@ var _ json.UnmarshalerFrom = (*CustomClosingTagCompletion)(nil)
 func (s *CustomClosingTagCompletion) UnmarshalJSONFrom(dec *json.Decoder) error {
 	const (
 		missingNewText uint = 1 << iota
-		missingVsTextEdit
-		missingVsTextEditFormat
 		_missingLast
 	)
 	missing := _missingLast - 1
@@ -28428,7 +28426,6 @@ func (s *CustomClosingTagCompletion) UnmarshalJSONFrom(dec *json.Decoder) error 
 				return err
 			}
 		case `"_vs_textEdit"`:
-			missing &^= missingVsTextEdit
 			if dec.PeekKind() == 'n' {
 				return errNull("_vs_textEdit")
 			}
@@ -28436,7 +28433,9 @@ func (s *CustomClosingTagCompletion) UnmarshalJSONFrom(dec *json.Decoder) error 
 				return err
 			}
 		case `"_vs_textEditFormat"`:
-			missing &^= missingVsTextEditFormat
+			if dec.PeekKind() == 'n' {
+				return errNull("_vs_textEditFormat")
+			}
 			if err := json.UnmarshalDecode(dec, &s.VsTextEditFormat); err != nil {
 				return err
 			}
@@ -28455,12 +28454,6 @@ func (s *CustomClosingTagCompletion) UnmarshalJSONFrom(dec *json.Decoder) error 
 		var missingProps []string
 		if missing&missingNewText != 0 {
 			missingProps = append(missingProps, "newText")
-		}
-		if missing&missingVsTextEdit != 0 {
-			missingProps = append(missingProps, "_vs_textEdit")
-		}
-		if missing&missingVsTextEditFormat != 0 {
-			missingProps = append(missingProps, "_vs_textEditFormat")
 		}
 		return errMissing(missingProps)
 	}

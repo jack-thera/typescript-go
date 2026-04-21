@@ -29,15 +29,7 @@ func (l *LanguageService) ProvideClosingTagCompletion(ctx context.Context, param
 		tagNameNode := element.AsJsxElement().OpeningElement.TagName()
 		// Slight divergence from Strada - we don't use the verbatim text from the opening tag.
 		closingText := "</" + ast.EntityNameToString(tagNameNode, scanner.GetTextOfNode) + ">"
-		result := lsproto.CustomClosingTagCompletion{
-			NewText: closingText,
-			VsTextEdit: &lsproto.TextEdit{
-				Range:   lsproto.Range{Start: params.Position, End: params.Position},
-				NewText: "$0" + closingText,
-			},
-			VsTextEditFormat: lsproto.InsertTextFormatSnippet,
-		}
-		return lsproto.CustomClosingTagCompletionResponse{CustomClosingTagCompletion: &result}, nil
+		return buildClosingTagResponse(ctx, params.Position, closingText), nil
 	}
 
 	var fragment *ast.Node
@@ -48,18 +40,25 @@ func (l *LanguageService) ProvideClosingTagCompletion(ctx context.Context, param
 	}
 
 	if fragment != nil && isUnclosedFragment(fragment.AsJsxFragment()) {
-		result := lsproto.CustomClosingTagCompletion{
-			NewText: "</>",
-			VsTextEdit: &lsproto.TextEdit{
-				Range:   lsproto.Range{Start: params.Position, End: params.Position},
-				NewText: "$0</>",
-			},
-			VsTextEditFormat: lsproto.InsertTextFormatSnippet,
-		}
-		return lsproto.CustomClosingTagCompletionResponse{CustomClosingTagCompletion: &result}, nil
+		return buildClosingTagResponse(ctx, params.Position, "</>"), nil
 	}
 
 	return lsproto.CustomClosingTagCompletionResponse{}, nil
+}
+
+func buildClosingTagResponse(ctx context.Context, position lsproto.Position, closingText string) lsproto.CustomClosingTagCompletionResponse {
+	result := lsproto.CustomClosingTagCompletion{
+		NewText: closingText,
+	}
+	if lsproto.GetClientCapabilities(ctx).VSSupportsVisualStudioExtensions {
+		snippetFormat := lsproto.InsertTextFormatSnippet
+		result.VsTextEdit = &lsproto.TextEdit{
+			Range:   lsproto.Range{Start: position, End: position},
+			NewText: "$0" + closingText,
+		}
+		result.VsTextEditFormat = &snippetFormat
+	}
+	return lsproto.CustomClosingTagCompletionResponse{CustomClosingTagCompletion: &result}
 }
 
 func isUnclosedTag(node *ast.JsxElement) bool {
