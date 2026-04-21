@@ -90,3 +90,28 @@ func isUnclosedFragment(node *ast.JsxFragment) bool {
 
 	return false
 }
+
+func (l *LanguageService) ProvideOnAutoInsert(ctx context.Context, params *lsproto.VsOnAutoInsertParams) (lsproto.VsOnAutoInsertResponse, error) {
+	if params.VSCh != ">" {
+		return lsproto.VsOnAutoInsertResponse{}, nil
+	}
+
+	closingTag, err := l.ProvideClosingTagCompletion(ctx, &lsproto.TextDocumentPositionParams{
+		TextDocument: params.VSTextDocument,
+		Position:     params.VSPosition,
+	})
+	if err != nil {
+		return lsproto.VsOnAutoInsertResponse{}, err
+	}
+
+	if closingTag.CustomClosingTagCompletion != nil && closingTag.CustomClosingTagCompletion.VSTextEdit != nil {
+		return lsproto.VsOnAutoInsertResponse{
+			VsOnAutoInsertResponseItem: &lsproto.VsOnAutoInsertResponseItem{
+				VSTextEditFormat: *closingTag.CustomClosingTagCompletion.VSTextEditFormat,
+				VSTextEdit:       closingTag.CustomClosingTagCompletion.VSTextEdit,
+			},
+		}, nil
+	}
+
+	return lsproto.VsOnAutoInsertResponse{}, nil
+}

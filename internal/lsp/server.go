@@ -1455,24 +1455,7 @@ func (s *Server) handleClosingTagCompletion(ctx context.Context, ls *ls.Language
 }
 
 func (s *Server) handleVsOnAutoInsert(ctx context.Context, ls *ls.LanguageService, params *lsproto.VsOnAutoInsertParams) (lsproto.VsOnAutoInsertResponse, error) {
-	if params.VSCh == ">" {
-		closingTag, err := ls.ProvideClosingTagCompletion(ctx, &lsproto.TextDocumentPositionParams{
-			TextDocument: params.VSTextDocument,
-			Position:     params.VSPosition,
-		})
-		if err != nil {
-			return lsproto.VsOnAutoInsertResponse{}, err
-		}
-		if closingTag.CustomClosingTagCompletion != nil && closingTag.CustomClosingTagCompletion.VSTextEdit != nil {
-			return lsproto.VsOnAutoInsertResponse{
-				VsOnAutoInsertResponseItem: &lsproto.VsOnAutoInsertResponseItem{
-					VSTextEditFormat: *closingTag.CustomClosingTagCompletion.VSTextEditFormat,
-					VSTextEdit:       closingTag.CustomClosingTagCompletion.VSTextEdit,
-				},
-			}, nil
-		}
-	}
-	return lsproto.VsOnAutoInsertResponse{}, nil
+	return ls.ProvideOnAutoInsert(ctx, params)
 }
 
 func (s *Server) handleLinkedEditingRange(ctx context.Context, ls *ls.LanguageService, params *lsproto.LinkedEditingRangeParams) (lsproto.LinkedEditingRangeResponse, error) {
