@@ -68,6 +68,15 @@ class AutoInsert {
             return;
         }
 
+        // Avoid firing again when the user types a trigger character immediately
+        // after another (e.g. `>>` in JSX).
+        if (lastChange.range.start.character > 0) {
+            const priorRange = new vscode.Range(lastChange.range.start.translate(0, -1), lastChange.range.start);
+            if (this.triggerCharacters.has(document.getText(priorRange))) {
+                return;
+            }
+        }
+
         // Compute the post-insert cursor position from the change itself;
         // `activeEditor.selection.active` is not yet updated when this event fires.
         const addedLines = lastChange.text.split(/\r\n|\n/g);
@@ -105,11 +114,22 @@ class AutoInsert {
         }
 
         const edit = this.client.protocol2CodeConverter.asTextEdit(response._vs_textEdit);
+        // If the same trigger character was typed at every cursor in the same change,
+        // apply the snippet/edit at every cursor.
+        const cursors = activeEditor.selections.map(s => s.active);
+        const insertionRanges = cursors.some(p => p.isEqual(position)) ? cursors : edit.range;
         if (response._vs_textEditFormat === InsertTextFormat.Snippet) {
-            activeEditor.insertSnippet(new vscode.SnippetString(edit.newText), edit.range);
+            activeEditor.insertSnippet(new vscode.SnippetString(edit.newText), insertionRanges);
         }
         else {
-            activeEditor.edit(b => b.replace(edit.range, edit.newText));
+            activeEditor.edit(b => {
+                if (Array.isArray(insertionRanges)) {
+                    for (const p of insertionRanges) b.insert(p, edit.newText);
+                }
+                else {
+                    b.replace(insertionRanges, edit.newText);
+                }
+            });
         }
     }
 }
