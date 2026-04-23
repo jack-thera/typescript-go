@@ -103,15 +103,15 @@ func (t *parseTask) load(loader *fileLoader) {
 		t.metadata = ast.SourceFileMetaData{ImpliedNodeFormat: core.ResolutionModeCommonJS}
 	} else {
 		// Resolution: load metadata (package.json lookups involve stat calls).
-		loader.filesParser.resolveSem.Acquire()
+		release := loader.filesParser.resolveSem.Acquire()
 		t.metadata = loader.loadSourceFileMetaData(t.normalizedFilePath)
-		loader.filesParser.resolveSem.Release()
+		release()
 	}
 
 	// Parsing: parse the source file (CPU-heavy).
-	loader.filesParser.parseSem.Acquire()
+	releaseParse := loader.filesParser.parseSem.Acquire()
 	file := loader.parseSourceFile(t)
-	loader.filesParser.parseSem.Release()
+	releaseParse()
 	if file == nil {
 		return
 	}
@@ -120,7 +120,7 @@ func (t *parseTask) load(loader *fileLoader) {
 	t.subTasks = make([]*parseTask, 0, len(file.ReferencedFiles)+len(file.Imports())+len(file.ModuleAugmentations))
 
 	// Resolution: resolve references, type directives, and imports (stat-heavy).
-	loader.filesParser.resolveSem.Acquire()
+	releaseResolve := loader.filesParser.resolveSem.Acquire()
 
 	compilerOptions := loader.opts.Config.CompilerOptions()
 	if !compilerOptions.NoResolve.IsTrue() {
@@ -162,7 +162,7 @@ func (t *parseTask) load(loader *fileLoader) {
 
 	loader.resolveImportsAndModuleAugmentations(t)
 
-	loader.filesParser.resolveSem.Release()
+	releaseResolve()
 }
 
 func (t *parseTask) redirect(loader *fileLoader, fileName string) {
@@ -176,8 +176,8 @@ func (t *parseTask) redirect(loader *fileLoader, fileName string) {
 }
 
 func (t *parseTask) loadAutomaticTypeDirectives(loader *fileLoader) {
-	loader.filesParser.resolveSem.Acquire()
-	defer loader.filesParser.resolveSem.Release()
+	release := loader.filesParser.resolveSem.Acquire()
+	defer release()
 	toParseTypeRefs, typeResolutionsInFile, typeResolutionsTrace, pDiagnostics := loader.resolveAutomaticTypeDirectives(t.normalizedFilePath)
 	t.typeResolutionsInFile = typeResolutionsInFile
 	t.typeResolutionsTrace = typeResolutionsTrace
@@ -210,8 +210,8 @@ func (t *parseTask) addSubTask(ref resolvedRef, libFile *LibFile) {
 
 type filesParser struct {
 	wg             core.WorkGroup
-	resolveSem     *core.Semaphore
-	parseSem       *core.Semaphore
+	resolveSem     core.Semaphore
+	parseSem       core.Semaphore
 	taskDataByPath collections.SyncMap[tspath.Path, *parseTaskData]
 	maxDepth       int
 }

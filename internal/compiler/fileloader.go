@@ -139,8 +139,8 @@ func processAllProgramFiles(
 		},
 		filesParser: &filesParser{
 			wg:         core.NewWorkGroup(singleThreaded),
-			resolveSem: core.NewSemaphore(singleThreaded),
-			parseSem:   core.NewSemaphore(singleThreaded),
+			resolveSem: core.NewGOMAXPROCSSemaphore(singleThreaded),
+			parseSem:   core.NewGOMAXPROCSSemaphore(singleThreaded),
 			maxDepth:   maxNodeModuleJsDepth,
 		},
 		rootTasks:           make([]*parseTask, 0, len(rootFiles)+len(compilerOptions.Lib)),
