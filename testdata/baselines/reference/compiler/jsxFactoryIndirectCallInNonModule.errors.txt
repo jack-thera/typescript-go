@@ -1,0 +1,16 @@
+jsxFactoryIndirectCallInNonModule.tsx(4,16): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+jsxFactoryIndirectCallInNonModule.tsx(4,42): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+
+
+==== jsxFactoryIndirectCallInNonModule.tsx (2 errors) ====
+    // file is intentionally not a module - tests that jsx factory calls use indirect call pattern
+    class Component {
+        render() {
+            return <div>{null/* preserved */}</div>;
+                   ~~~~~
+!!! error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+                                             ~~~~~~
+!!! error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+        }
+    }
+    

@@ -226,18 +226,28 @@ func (tx *CommonJSModuleTransformer) visitAssignmentPatternNoStack(node *ast.Nod
 }
 
 func (tx *CommonJSModuleTransformer) visitSourceFile(node *ast.SourceFile) *ast.Node {
-	if node.IsDeclarationFile ||
-		!(ast.IsEffectiveExternalModule(node, tx.compilerOptions) ||
-			node.SubtreeFacts()&ast.SubtreeContainsDynamicImport != 0) {
+	if node.IsDeclarationFile {
 		return node.AsNode()
 	}
 
 	tx.currentSourceFile = node
-	tx.currentModuleInfo = collectExternalModuleInfo(node, tx.compilerOptions, tx.EmitContext(), tx.resolver)
-	updated := tx.transformCommonJSModule(node)
+
+	if ast.IsEffectiveExternalModule(node, tx.compilerOptions) ||
+		node.SubtreeFacts()&ast.SubtreeContainsDynamicImport != 0 {
+		tx.currentModuleInfo = collectExternalModuleInfo(node, tx.compilerOptions, tx.EmitContext(), tx.resolver)
+		updated := tx.transformCommonJSModule(node)
+		tx.currentSourceFile = nil
+		tx.currentModuleInfo = nil
+		return updated
+	}
+
+	// For non-module files, still visit for import substitutions (e.g., JSX factory imports).
+	// In Strada, this was handled by the `onSubstituteNode` callback during printing.
+	tx.currentModuleInfo = &externalModuleInfo{}
+	result := tx.Visitor().VisitEachChild(node.AsNode())
 	tx.currentSourceFile = nil
 	tx.currentModuleInfo = nil
-	return updated
+	return result
 }
 
 func (tx *CommonJSModuleTransformer) shouldEmitUnderscoreUnderscoreESModule() bool {
@@ -2105,6 +2115,9 @@ func (tx *CommonJSModuleTransformer) visitExpressionIdentifier(node *ast.Identif
 
 // Gets the exported names of an identifier, if it is exported.
 func (tx *CommonJSModuleTransformer) getExports(name *ast.IdentifierNode) []*ast.ModuleExportName {
+	if tx.currentModuleInfo == nil {
+		return nil
+	}
 	if !transformers.IsGeneratedIdentifier(tx.EmitContext(), name) {
 		importDeclaration := tx.resolver.GetReferencedImportDeclaration(tx.EmitContext().MostOriginal(name))
 		if importDeclaration != nil {

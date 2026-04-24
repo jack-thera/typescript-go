@@ -26,6 +26,6 @@ class Component {
 "use strict";
 class Component {
     render() {
-        return _jsx("div", { children: null /* preserved */ });
+        return (0, _a.jsx)("div", { children: null /* preserved */ });
     }
 }

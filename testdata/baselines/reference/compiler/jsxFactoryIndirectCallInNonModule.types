@@ -1,0 +1,17 @@
+//// [tests/cases/compiler/jsxFactoryIndirectCallInNonModule.tsx] ////
+
+=== jsxFactoryIndirectCallInNonModule.tsx ===
+// file is intentionally not a module - tests that jsx factory calls use indirect call pattern
+class Component {
+>Component : Component
+
+    render() {
+>render : () => any
+
+        return <div>{null/* preserved */}</div>;
+><div>{null/* preserved */}</div> : any
+>div : any
+>div : any
+    }
+}
+
