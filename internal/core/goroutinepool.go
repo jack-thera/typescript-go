@@ -16,7 +16,9 @@ import (
 type GoroutinePool interface {
 	// Run submits fn and blocks until it returns. Panics in fn re-panic on the caller.
 	Run(fn func())
-	// Queue submits fn without waiting. Panics in fn crash the program.
+	// Queue submits fn without waiting on worker-backed pools. The single-threaded
+	// immediatePool implementation runs fn inline on the caller instead. Panics in
+	// fn crash the program.
 	Queue(fn func())
 	// Close drains submitted work and stops the workers. Must be called once;
 	// after it returns, Run and Queue panic.
