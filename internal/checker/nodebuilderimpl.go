@@ -1047,7 +1047,7 @@ func (b *NodeBuilderImpl) lookupTypeParameterNodes(chain []*ast.Symbol, index in
 	symbolId := ast.GetSymbolId(symbol)
 	if !b.ctx.hasCreatedTypeParameterSymbolList {
 		b.ctx.hasCreatedTypeParameterSymbolList = true
-		b.ctx.typeParameterSymbolList = make(map[ast.SymbolId]struct{})
+		b.ctx.typeParameterSymbolList = core.CloneOrMakeMap(b.ctx.typeParameterSymbolList)
 	}
 	_, ok := b.ctx.typeParameterSymbolList[symbolId]
 	if ok {
@@ -1438,9 +1438,9 @@ func (b *NodeBuilderImpl) typeParameterToName(typeParameter *Type) *ast.Identifi
 	if b.ctx.flags&nodebuilder.FlagsGenerateNamesForShadowedTypeParams != 0 {
 		if !b.ctx.hasCreatedTypeParametersNamesLookups {
 			b.ctx.hasCreatedTypeParametersNamesLookups = true
-			b.ctx.typeParameterNames = make(map[TypeId]*ast.Identifier)
-			b.ctx.typeParameterNamesByText = make(map[string]struct{})
-			b.ctx.typeParameterNamesByTextNextNameCount = make(map[string]int)
+			b.ctx.typeParameterNames = core.CloneOrMakeMap(b.ctx.typeParameterNames)
+			b.ctx.typeParameterNamesByText = core.CloneOrMakeMap(b.ctx.typeParameterNamesByText)
+			b.ctx.typeParameterNamesByTextNextNameCount = core.CloneOrMakeMap(b.ctx.typeParameterNamesByTextNextNameCount)
 		}
 
 		rawText := result.Text()
@@ -3472,7 +3472,7 @@ func (b *NodeBuilderImpl) lookupExpressionChainTypeArgumentNodes(chain []*ast.Sy
 		symbolId := ast.GetSymbolId(symbol)
 		if !b.ctx.hasCreatedTypeParameterSymbolList {
 			b.ctx.hasCreatedTypeParameterSymbolList = true
-			b.ctx.typeParameterSymbolList = make(map[ast.SymbolId]struct{})
+			b.ctx.typeParameterSymbolList = core.CloneOrMakeMap(b.ctx.typeParameterSymbolList)
 		}
 
 		if _, ok := b.ctx.typeParameterSymbolList[symbolId]; ok {
