@@ -611,6 +611,9 @@ func convertOptionsFromJson[O optionParser](optionsNameMap CommandLineOptionName
 	var errors []*ast.Diagnostic
 	for key, value := range jsonMap.Entries() {
 		opt := optionsNameMap.Get(key)
+		if opt != nil && opt.Name != key {
+			opt = nil
+		}
 		if opt == nil {
 			// !!! TODO?: support suggestion
 			errors = append(errors, createUnknownOptionError(key, result.UnknownOptionDiagnostic(), "", nil, nil, nil))
@@ -746,6 +749,9 @@ func convertObjectLiteralExpressionToJson(
 		var option *CommandLineOption = nil
 		if keyText != "" && objectOption != nil && objectOption.ElementOptions != nil {
 			option = objectOption.ElementOptions.Get(keyText)
+			if option != nil && option.Name != keyText {
+				option = nil
+			}
 		}
 		value, err := convertPropertyValueToJson(sourceFile, element.AsPropertyAssignment().Initializer, option, returnValue, jsonConversionNotifier)
 		errors = append(errors, err...)
