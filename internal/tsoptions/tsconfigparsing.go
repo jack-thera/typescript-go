@@ -214,15 +214,37 @@ func parseOwnConfigOfJsonSourceFile(
 			} else if keyText != "" && extraKeyDiagnostics(parentOption.Name) != nil {
 				unknownNameDiag := extraKeyDiagnostics(parentOption.Name)
 				if parentOption.ElementOptions != nil {
-					// !!! TODO: support suggestion
-					propertySetErrors = append(propertySetErrors, createUnknownOptionError(
-						keyText,
-						unknownNameDiag,
-						"", /*unknownOptionErrorText*/
-						propertyAssignment.Name(),
-						sourceFile,
-						nil, /*alternateMode*/
-					))
+					possibleOption := parentOption.ElementOptions.Get(keyText)
+					if possibleOption != nil && possibleOption.Name != keyText {
+						didYouMeanDiag := extraKeyDidYouMeanDiagnostics(parentOption.Name)
+						if didYouMeanDiag != nil {
+							propertySetErrors = append(propertySetErrors, CreateDiagnosticForNodeInSourceFileOrCompilerDiagnostic(
+								sourceFile,
+								propertyAssignment.Name(),
+								didYouMeanDiag,
+								keyText,
+								possibleOption.Name,
+							))
+						} else {
+							propertySetErrors = append(propertySetErrors, createUnknownOptionError(
+								keyText,
+								unknownNameDiag,
+								"", /*unknownOptionErrorText*/
+								propertyAssignment.Name(),
+								sourceFile,
+								nil, /*alternateMode*/
+							))
+						}
+					} else {
+						propertySetErrors = append(propertySetErrors, createUnknownOptionError(
+							keyText,
+							unknownNameDiag,
+							"", /*unknownOptionErrorText*/
+							propertyAssignment.Name(),
+							sourceFile,
+							nil, /*alternateMode*/
+						))
+					}
 				} else {
 					// errors = append(errors, ast.NewCompilerDiagnostic(diagnostics.Unknown_compiler_option_0_Did_you_mean_1, keyText, core.FindKey(parentOption.ElementOptions, keyText)))
 				}
@@ -612,10 +634,16 @@ func convertOptionsFromJson[O optionParser](optionsNameMap CommandLineOptionName
 	for key, value := range jsonMap.Entries() {
 		opt := optionsNameMap.Get(key)
 		if opt != nil && opt.Name != key {
-			opt = nil
+			// Case-insensitive match found but exact case doesn't match - provide "did you mean" suggestion
+			didYouMeanDiag := result.UnknownDidYouMeanDiagnostic()
+			if didYouMeanDiag != nil {
+				errors = append(errors, CreateDiagnosticForNodeInSourceFileOrCompilerDiagnostic(nil, nil, didYouMeanDiag, key, opt.Name))
+			} else {
+				errors = append(errors, createUnknownOptionError(key, result.UnknownOptionDiagnostic(), "", nil, nil, nil))
+			}
+			continue
 		}
 		if opt == nil {
-			// !!! TODO?: support suggestion
 			errors = append(errors, createUnknownOptionError(key, result.UnknownOptionDiagnostic(), "", nil, nil, nil))
 			continue
 		}

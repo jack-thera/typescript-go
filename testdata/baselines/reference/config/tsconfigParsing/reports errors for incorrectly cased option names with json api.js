@@ -31,13 +31,13 @@ TypeAcquisition::
 FileNames::
 /app.ts
 Errors::
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'sourcemap'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'declarationmap'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'nouncheckedindexedaccess'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'exactoptionalpropertytypes'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'verbatimmodulesyntax'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'isolatedmodules'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'nouncheckedsideeffectimports'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'moduledetection'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'skiplibcheck'.
-[91merror[0m[90m TS5023: [0mUnknown compiler option 'checkjs'.
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'sourcemap'. Did you mean 'sourceMap'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'declarationmap'. Did you mean 'declarationMap'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'nouncheckedindexedaccess'. Did you mean 'noUncheckedIndexedAccess'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'exactoptionalpropertytypes'. Did you mean 'exactOptionalPropertyTypes'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'verbatimmodulesyntax'. Did you mean 'verbatimModuleSyntax'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'isolatedmodules'. Did you mean 'isolatedModules'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'nouncheckedsideeffectimports'. Did you mean 'noUncheckedSideEffectImports'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'moduledetection'. Did you mean 'moduleDetection'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'skiplibcheck'. Did you mean 'skipLibCheck'?
+[91merror[0m[90m TS5025: [0mUnknown compiler option 'checkjs'. Did you mean 'checkJs'?
