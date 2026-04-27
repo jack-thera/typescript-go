@@ -79,6 +79,7 @@ typescript-go/
 │   ├── parser/       # TypeScript parser
 │   ├── scanner/      # Lexer/scanner
 │   └── compiler/     # Compiler pipeline
+├── docs/             # Personal notes and documentation
 ├── testdata/         # Test fixtures
 └── tests/            # Integration tests
 ```
