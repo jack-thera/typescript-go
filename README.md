@@ -1,79 +1,98 @@
-# TypeScript 7
+# typescript-go
 
-[Not sure what this is? Read the announcement post!](https://devblogs.microsoft.com/typescript/typescript-native-port/)
+A Go implementation of the TypeScript compiler and language services.
 
-## Preview
+This is a fork of [microsoft/typescript-go](https://github.com/microsoft/typescript-go), aimed at providing a high-performance TypeScript compiler written in Go.
 
-A preview build is available on npm as [`@typescript/native-preview`](https://www.npmjs.com/package/@typescript/native-preview).
+## Overview
 
-```sh
-npm install @typescript/native-preview
-npx tsgo # Use this as you would tsc.
+`typescript-go` reimplements the TypeScript compiler in Go, offering:
+
+- **Faster compilation** — leveraging Go's concurrency and performance characteristics
+- **Lower memory usage** — more efficient data structures and memory management
+- **Native binaries** — no Node.js runtime required for compilation
+- **Language server support** — LSP-compatible language server for editor integrations
+
+## Status
+
+> ⚠️ This project is under active development. APIs and behavior may change.
+
+## Requirements
+
+- Go 1.22 or later
+- Node.js 18+ (for running TypeScript test suites)
+
+## Getting Started
+
+### Building
+
+```bash
+git clone https://github.com/nicholasgasior/typescript-go
+cd typescript-go
+go build ./...
 ```
 
-A preview VS Code extension is [available on the VS Code marketplace](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview).
+### Running Tests
 
-To use this, set this in your VS Code settings:
-
-```json
-{
-    "js/ts.experimental.useTsgo": true
-}
+```bash
+go test ./...
 ```
 
-## What Works So Far?
+### Running the Compiler
 
-This is still a work in progress and is not yet at full feature parity with TypeScript. Bugs may exist. Please check this list carefully before logging a new issue or assuming an intentional change.
+```bash
+go run ./cmd/tsgo --project tsconfig.json
+```
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Program creation | done | Same files and module resolution as TS 6.0. Not all resolution modes supported yet. |
-| Parsing/scanning | done | Exact same syntax errors as TS 6.0 |
-| Commandline and `tsconfig.json` parsing | done | Done, though `tsconfig` errors may not be as helpful. |
-| Type resolution | done | Same types as TS 6.0. |
-| Type checking | done | Same errors, locations, and messages as TS 6.0. Types printback in errors may display differently. |
-| JavaScript-specific inference and JSDoc | in progress | Mostly complete, but intentionally lacking some features. Declaration emit not complete. |
-| JSX | done | - |
-| Declaration emit | in progress | Done for TypeScript files. Not yet complete for JavaScript files. |
-| Emit (JS output) | done | - |
-| Watch mode | prototype | Watches files and rebuilds, but no incremental rechecking. Not optimized. |
-| Build mode / project references | done | - |
-| Incremental build | done | - |
-| Language service (LSP) | in progress | Nearly all features implemented. |
-| API | not ready | - |
+## Development
 
-Definitions:
+### Dev Container
 
- * **done** aka "believed done": We're not currently aware of any deficits or major work left to do. OK to log bugs
- * **in progress**: currently being worked on; some features may work and some might not. OK to log panics, but nothing else please
- * **prototype**: proof-of-concept only; do not log bugs
- * **not ready**: either haven't even started yet, or far enough from ready that you shouldn't bother messing with it yet
+This repository includes a [Dev Container](.devcontainer/devcontainer.json) configuration for VS Code. Open the repository in VS Code and select **Reopen in Container** to get a fully configured development environment.
 
-## Other Notes
+### Code Formatting
 
-Long-term, we expect that this repo and its contents will be merged into `microsoft/TypeScript`.
-As a result, the repo and issue tracker for typescript-go will eventually be closed, so treat discussions/issues accordingly.
+We use [dprint](https://dprint.dev/) for formatting. Configuration is in [`.dprint.jsonc`](.dprint.jsonc).
 
-For a list of intentional changes with respect to TypeScript 6.0, see CHANGES.md.
+```bash
+dprint fmt
+```
+
+### Linting
+
+We use [golangci-lint](https://golangci-lint.run/) with a custom configuration defined in [`.custom-gcl.yml`](.custom-gcl.yml).
+
+```bash
+golangci-lint run
+```
+
+## Project Structure
+
+```
+typescript-go/
+├── cmd/              # Entry points (compiler CLI, language server)
+├── internal/         # Internal packages
+│   ├── ast/          # TypeScript AST definitions
+│   ├── checker/      # Type checker
+│   ├── parser/       # TypeScript parser
+│   ├── scanner/      # Lexer/scanner
+│   └── compiler/     # Compiler pipeline
+├── testdata/         # Test fixtures
+└── tests/            # Integration tests
+```
 
 ## Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit [Contributor License Agreements](https://cla.opensource.microsoft.com).
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+When filing issues, use the appropriate [issue template](.github/ISSUE_TEMPLATE/):
+- **Crash** — for panics or unexpected crashes
+- **Behavior difference** — for output differences vs the official TypeScript compiler
+- **VS Code editor issue** — for language server / editor integration issues
+- **Other** — for anything else
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## License
 
-## Trademarks
+This project is licensed under the Apache 2.0 License — see the [LICENSE](LICENSE) file for details.
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+Portions of this code are derived from [microsoft/TypeScript](https://github.com/microsoft/TypeScript), which is licensed under the Apache 2.0 License.
