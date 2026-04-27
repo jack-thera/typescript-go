@@ -94,8 +94,16 @@ When filing issues, use the appropriate [issue template](.github/ISSUE_TEMPLATE/
 - **VS Code editor issue** — for language server / editor integration issues
 - **Other** — for anything else
 
+## Personal Notes
+
+Some areas I've been digging into while studying this codebase:
+
+- `internal/checker/` — the type checker is the most complex part; start with `checker.go` and follow `checkSourceFile`
+- `internal/parser/` — closely mirrors the original TS parser, good reference for understanding the Go port approach
+- Comparing `internal/ast/` node types against `src/compiler/types.ts` in the upstream TypeScript repo is a useful exercise
+
 ## License
 
 This project is licensed under the Apache 2.0 License — see the [LICENSE](LICENSE) file for details.
 
-Portions of this code are derived from [microsoft/TypeScript](https://github.com/microsoft/TypeScript), which is licensed under the Apache 2.0 License.
+Portions of this code are derived from [microsoft/TypeScript](https://github.com/microsoft/TypeScript), which is licensed under the 
