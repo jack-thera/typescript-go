@@ -17,6 +17,8 @@ This is a fork of [microsoft/typescript-go](https://github.com/microsoft/typescr
 
 > ⚠️ This project is under active development. APIs and behavior may change.
 
+> 📝 **Personal note:** I'm using this fork primarily to study how the TypeScript type checker maps to Go idioms. See my notes in `docs/learning-notes.md` (WIP).
+
 ## Requirements
 
 - Go 1.22 or later
