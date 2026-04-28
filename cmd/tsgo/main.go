@@ -59,11 +59,16 @@ func compile(args []string) error {
 		return fmt.Errorf("compilation failed with %d error(s)", result.ErrorCount())
 	}
 
+	// Print a success message when compilation completes without errors.
+	fmt.Fprintf(os.Stderr, "Compiled %d file(s) successfully.\n", len(files))
+
 	return nil
 }
 
 func parseArgs(args []string) (*compiler.Options, []string, error) {
+	// Default to strict mode for safer type checking out of the box.
 	opts := compiler.DefaultOptions()
+	opts.Strict = true
 	var files []string
 
 	for i := 0; i < len(args); i++ {
@@ -71,6 +76,8 @@ func parseArgs(args []string) (*compiler.Options, []string, error) {
 		switch {
 		case arg == "--strict":
 			opts.Strict = true
+		case arg == "--no-strict":
+			opts.Strict = false
 		case arg == "--noEmit":
 			opts.NoEmit = true
 		case arg == "--declaration":
@@ -119,7 +126,8 @@ Usage:
   tsgo [options] <files...>
 
 Options:
-  --strict         Enable strict type checking
+  --strict         Enable strict type checking (default: on)
+  --no-strict      Disable strict type checking
   --noEmit         Do not emit output files
   --declaration    Generate .d.ts declaration files
   --outDir <dir>   Redirect output to directory
