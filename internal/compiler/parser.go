@@ -90,11 +90,14 @@ const (
 
 // supportedExtensions lists all TypeScript file extensions accepted by ParseFile.
 // Note: ".d.ts" is handled by filepath.Ext as ".ts", so it matches the ".ts" case.
+// Also including ".js" and ".jsx" to support allowJs scenarios during learning/experimentation.
 var supportedExtensions = map[string]bool{
 	".ts":  true,
 	".tsx": true,
 	".mts": true, // added: support for ES module TypeScript files
 	".cts": true, // added: support for CommonJS TypeScript files
+	".js":  true, // personal: useful when experimenting with allowJs projects
+	".jsx": true, // personal: useful when experimenting with allowJs projects
 }
 
 // ParseFile reads and performs a lightweight parse of a TypeScript source file.
@@ -119,10 +122,10 @@ func ParseFile(fileName string) (*SourceFile, error) {
 	ext := strings.ToLower(filepath.Ext(abs))
 	if !supportedExtensions[ext] {
 		sf.Diagnostics = append(sf.Diagnostics, Diagnostic{
-			File:     sf,
-			Message:  fmt.Sprintf("unsupported file extension %q", ext),
-			Category: DiagnosticCategoryWarning,
-			Code:     6054,
+			File:    sf,
+			Message: fmt.Sprintf("unsupported file extension %q", ext),
+			Category: DiagnosticCategoryError,
+			Code:    1000,
 		})
 	}
 
