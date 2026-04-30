@@ -120,9 +120,15 @@ const (
 )
 
 // TextRange represents a span of text in the source file.
+// Pos is inclusive, End is exclusive (similar to how TypeScript's compiler models ranges).
 type TextRange struct {
 	Pos int
 	End int
+}
+
+// Width returns the number of characters spanned by this TextRange.
+func (r TextRange) Width() int {
+	return r.End - r.Pos
 }
 
 // Node is the base interface for all AST nodes.
@@ -131,52 +137,4 @@ type Node struct {
 	Flags  NodeFlags
 	Pos    int
 	End    int
-	Parent *Node
-}
-
-// SourceFile represents a parsed TypeScript source file.
-type SourceFile struct {
-	Node
-	FileName        string
-	Text            string
-	Statements      []*Node
-	EndOfFileToken  *Node
-	IsDeclarationFile bool
-	HasNoDefaultLib bool
-}
-
-// Diagnostic represents a compiler error, warning, or message.
-type Diagnostic struct {
-	File     *SourceFile
-	Start    int
-	Length   int
-	Code     int
-	Category DiagnosticCategory
-	Message  string
-}
-
-// DiagnosticCategory represents the severity of a diagnostic.
-type DiagnosticCategory int
-
-const (
-	DiagnosticCategoryWarning DiagnosticCategory = iota
-	DiagnosticCategoryError
-	DiagnosticCategorySuggestion
-	DiagnosticCategoryMessage
-)
-
-// String returns a human-readable string for the diagnostic category.
-func (c DiagnosticCategory) String() string {
-	switch c {
-	case DiagnosticCategoryWarning:
-		return "warning"
-	case DiagnosticCategoryError:
-		return "error"
-	case DiagnosticCategorySuggestion:
-		return "suggestion"
-	case DiagnosticCategoryMessage:
-		return "message"
-	default:
-		return "unknown"
-	}
 }
